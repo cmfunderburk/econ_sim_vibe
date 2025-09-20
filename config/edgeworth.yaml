@@ -1,0 +1,33 @@
+# V1: Edgeworth 2×2 - Analytic equilibrium verification
+# Expected: ‖p_computed - p_analytic‖ < 1e-8
+
+simulation:
+  name: "Edgeworth 2×2 Box"
+  description: "Two agents, two goods, analytic solution verification"
+  seed: 42
+  max_rounds: 50
+  
+agents:
+  count: 2
+  utility_function: "cobb_douglas"
+  preferences:
+    agent_0: [0.6, 0.4]  # α for goods [1, 2]
+    agent_1: [0.3, 0.7]
+  
+  endowments:
+    agent_0: [10.0, 5.0]   # ω for goods [1, 2]
+    agent_1: [5.0, 10.0]
+  
+  positions:
+    agent_0: [0, 0]  # Start at marketplace
+    agent_1: [0, 0]  # Start at marketplace
+
+economy:
+  goods: 2
+  movement_cost: 0.0  # No spatial frictions for pure theory test
+  marketplace_size: [2, 2]  # 2×2 marketplace at origin
+  
+validation:
+  type: "analytic_comparison"
+  analytic_prices: [1.0, 1.5]  # Expected equilibrium prices
+  tolerance: 1e-8

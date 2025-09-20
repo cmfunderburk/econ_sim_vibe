@@ -1,0 +1,30 @@
+# V9: Scale Invariance - Price scaling preserves allocation
+# Expected: Identical demand after price rescaling
+
+simulation:
+  name: "Scale Invariance Test"
+  description: "Price scaling should not affect real allocations"
+  seed: 42
+  max_rounds: 100
+  
+agents:
+  count: 10
+  utility_function: "cobb_douglas"
+  preferences: "random_dirichlet"
+  endowments: "random_positive"
+  positions: "marketplace_start"
+
+economy:
+  goods: 4
+  movement_cost: 0.0
+  marketplace_size: [2, 2]
+  
+validation:
+  type: "scale_invariance"
+  test_procedure:
+    1. "Compute equilibrium prices p*"
+    2. "Scale prices by factor c > 0"
+    3. "Renormalize to p₁ ≡ 1"
+    4. "Assert identical demand vectors"
+  scale_factors: [0.5, 2.0, 10.0, 0.1]
+  tolerance: 1e-10

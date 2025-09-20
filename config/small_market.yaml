@@ -1,0 +1,27 @@
+# V3: Market Access - Efficiency loss vs baseline
+# Expected: efficiency_loss > 0.1 units of good 1
+
+simulation:
+  name: "Market Access Restriction"
+  description: "Small marketplace creates efficiency loss"
+  seed: 42
+  max_rounds: 200
+  
+agents:
+  count: 20
+  utility_function: "cobb_douglas"
+  preferences: "random_dirichlet"
+  endowments: "random_positive"
+  positions: "scattered"  # Start away from marketplace
+
+economy:
+  goods: 3
+  movement_cost: 0.5  # Moderate movement cost
+  marketplace_size: [2, 2]  # Small marketplace
+  grid_size: [15, 15]       # Large grid - many agents far from market
+  
+validation:
+  type: "efficiency_loss"
+  baseline: "frictionless_walrasian"
+  expected_loss_threshold: 0.1  # Minimum expected efficiency loss
+  metric: "equivalent_variation"

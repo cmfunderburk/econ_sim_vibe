@@ -1,0 +1,30 @@
+# V8: Stop Conditions - Termination logic validation
+# Expected: Proper termination on horizon, market clearing, or stale progress
+
+simulation:
+  name: "Termination Conditions Test"
+  description: "Validate all three termination conditions"
+  seed: 42
+  max_rounds: 200  # Test horizon termination
+  max_stale_rounds: 50
+  
+agents:
+  count: 12
+  utility_function: "cobb_douglas"
+  preferences: "convergent"  # Designed to reach equilibrium quickly
+  endowments: "balanced"
+  positions: "near_market"
+
+economy:
+  goods: 3
+  movement_cost: 0.2
+  marketplace_size: [3, 3]
+  rationing_eps: 1e-10
+  
+validation:
+  type: "termination_logic"
+  test_conditions:
+    - "horizon_termination"      # T >= max_rounds
+    - "market_cleared"          # All at market + demand < RATIONING_EPS for 5 rounds
+    - "stale_progress"          # No progress for max_stale_rounds
+  expected_termination_reasons: ["horizon", "market_cleared", "stale_progress"]

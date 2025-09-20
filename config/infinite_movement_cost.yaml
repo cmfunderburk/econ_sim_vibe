@@ -1,0 +1,27 @@
+# V5: Spatial Dominance - Phase 2 efficiency ≤ Phase 1
+# Expected: spatial_welfare ≤ walrasian_welfare
+
+simulation:
+  name: "Spatial Dominance Test"
+  description: "Infinite movement costs - spatial should underperform"
+  seed: 42
+  max_rounds: 200
+  
+agents:
+  count: 15
+  utility_function: "cobb_douglas"
+  preferences: "random_dirichlet"
+  endowments: "random_positive"
+  positions: "random_grid"
+
+economy:
+  goods: 3
+  movement_cost: 1000.0  # Effectively infinite - agents can't move
+  marketplace_size: [2, 2]
+  grid_size: [12, 12]
+  
+validation:
+  type: "welfare_dominance"
+  comparison: "spatial_vs_walrasian"
+  expected_relationship: "spatial_welfare <= walrasian_welfare"
+  tolerance: 1e-10

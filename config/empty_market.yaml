@@ -1,0 +1,28 @@
+# V7: Empty Marketplace - Edge case handling
+# Expected: prices == None and trades == []
+
+simulation:
+  name: "Empty Marketplace Test"
+  description: "No agents in marketplace - should skip pricing/clearing"
+  seed: 42
+  max_rounds: 50
+  
+agents:
+  count: 5
+  utility_function: "cobb_douglas"
+  preferences: "random_dirichlet"
+  endowments: "random_positive"
+  positions: "far_from_market"  # All start far from marketplace
+
+economy:
+  goods: 3
+  movement_cost: 1000.0  # Agents cannot reach marketplace
+  marketplace_size: [2, 2]
+  grid_size: [20, 20]
+  
+validation:
+  type: "edge_case"
+  expected_behavior:
+    prices: null
+    trades: []
+    market_participants: 0

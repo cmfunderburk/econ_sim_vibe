@@ -1,0 +1,30 @@
+# V10: Spatial Null (Unit Test) - κ=0, all agents at market initially
+# Expected: phase2_allocation == phase1_allocation and efficiency_loss < FEASIBILITY_TOL
+
+simulation:
+  name: "Spatial Null Unit Test"
+  description: "Perfect conditions - Phase 2 must equal Phase 1"
+  seed: 42
+  max_rounds: 50
+  
+agents:
+  count: 6
+  utility_function: "cobb_douglas"
+  preferences: "random_dirichlet"
+  endowments: "random_positive"
+  positions: "marketplace_only"  # All start inside marketplace
+
+economy:
+  goods: 3
+  movement_cost: 0.0  # No movement costs
+  marketplace_size: [2, 2]
+  
+validation:
+  type: "perfect_equivalence"
+  comparison: "phase1_vs_phase2"
+  expected_difference: 0.0
+  tolerance: 1e-10  # FEASIBILITY_TOL
+  metrics:
+    - "allocation_equality"
+    - "zero_efficiency_loss"
+    - "identical_prices"

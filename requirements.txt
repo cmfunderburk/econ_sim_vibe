@@ -1,0 +1,7 @@
+# Core runtime dependencies for economic simulation
+numpy>=1.24.0
+pygame>=2.5.0
+scipy>=1.10.0
+
+# Performance optimization (optional)
+numba>=0.58.0

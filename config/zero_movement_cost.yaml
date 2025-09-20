@@ -1,0 +1,27 @@
+# V2: Spatial Null - Phase 2 should equal Phase 1 exactly
+# Expected: efficiency_loss < 1e-10
+
+simulation:
+  name: "Spatial Null Test"
+  description: "Zero movement costs - Phase 2 should equal Phase 1"
+  seed: 42
+  max_rounds: 100
+  
+agents:
+  count: 10
+  utility_function: "cobb_douglas"
+  preferences: "random_dirichlet"  # Random preferences, clipped at 0.05
+  endowments: "random_positive"    # Ensure positive supply for all goods
+  positions: "random_grid"         # Random starting positions
+
+economy:
+  goods: 3
+  movement_cost: 0.0  # CRITICAL: Zero movement cost
+  marketplace_size: [2, 2]
+  grid_size: [10, 10]
+  
+validation:
+  type: "efficiency_comparison"
+  baseline: "phase_1_walrasian"
+  tolerance: 1e-10
+  metric: "equivalent_variation"

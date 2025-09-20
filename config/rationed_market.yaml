@@ -1,0 +1,26 @@
+# V4: Throughput Cap - Queue formation and carry-over orders
+# Expected: uncleared_orders > 0
+
+simulation:
+  name: "Market Throughput Cap"
+  description: "Limited clearing capacity creates queues"
+  seed: 42
+  max_rounds: 100
+  
+agents:
+  count: 50  # Many agents
+  utility_function: "cobb_douglas"
+  preferences: "random_dirichlet"
+  endowments: "random_positive"
+  positions: "marketplace_concentrated"  # Most start at marketplace
+
+economy:
+  goods: 4
+  movement_cost: 0.1
+  marketplace_size: [3, 3]
+  clearing_capacity: 0.5  # Artificial throughput limit
+  
+validation:
+  type: "queue_formation"
+  expected_queues: true
+  metric: "uncleared_order_volume"

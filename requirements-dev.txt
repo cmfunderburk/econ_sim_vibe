@@ -1,0 +1,34 @@
+# Development dependencies for economic simulation
+# Code quality and linting
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.5.0
+ruff>=0.1.0
+
+# Testing and coverage
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-xdist>=3.3.0  # parallel testing
+hypothesis>=6.88.0    # property-based testing
+
+# Performance profiling
+line-profiler>=4.0.0
+memory-profiler>=0.61.0
+py-spy>=0.3.14       # production profiling
+
+# Documentation
+sphinx>=7.0.0
+sphinx-rtd-theme>=1.3.0
+myst-parser>=2.0.0   # markdown support
+
+# Data analysis and visualization (for validation results)
+pandas>=2.0.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+jupyter>=1.0.0
+
+# Git hooks and automation
+pre-commit>=3.4.0
+
+# Environment management
+pip-tools>=7.0.0     # dependency pinning with pip-compile

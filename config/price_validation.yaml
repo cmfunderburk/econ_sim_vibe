@@ -1,0 +1,28 @@
+# V6: Price Normalization - p₁ ≡ 1 and rest-goods convergence
+# Expected: p[0] == 1.0 and ||Z_market(p)[1:]||_∞ < 1e-8
+
+simulation:
+  name: "Price Normalization Test"
+  description: "Validate numéraire constraint and convergence criteria"
+  seed: 42
+  max_rounds: 100
+  
+agents:
+  count: 8
+  utility_function: "cobb_douglas"
+  preferences: "random_dirichlet"
+  endowments: "random_positive"
+  positions: "marketplace_start"  # All start at marketplace
+
+economy:
+  goods: 4
+  movement_cost: 0.0
+  marketplace_size: [2, 2]
+  
+validation:
+  type: "numerical_stability"
+  checks:
+    - "numeraire_constraint"  # p[0] == 1.0
+    - "rest_goods_convergence"  # ||Z[1:]||_∞ < SOLVER_TOL
+    - "walras_law_validation"  # |p·Z| < SOLVER_TOL
+  tolerance: 1e-8
