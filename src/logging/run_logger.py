@@ -43,7 +43,7 @@ except Exception:  # pragma: no cover - environment without pandas
 LOGGER = logging.getLogger(__name__)
 
 # Increment only on breaking (non-backward-compatible) changes
-SCHEMA_VERSION = "1.0.0"
+SCHEMA_VERSION = "1.1.0"  # Added per-agent requested/exec/unmet/fill diagnostics (additive)
 # Schema Evolution Guidance:
 # - Bump minor version for additive, backward-compatible column additions.
 # - Bump major version for breaking changes (renames/removals/semantic shifts).
@@ -82,6 +82,16 @@ class RoundLogRecord:
 
     econ_prices: List[float]  # length G or [] if no pricing
     econ_executed_net: List[float]  # length G or [] if no trades/prices
+
+    # New enriched diagnostics (schema 1.1.0, additive):
+    econ_requested_buys: Optional[List[float]] = None      # raw requested buy quantities (length G) per agent
+    econ_requested_sells: Optional[List[float]] = None     # raw requested sell quantities (length G) per agent
+    econ_executed_buys: Optional[List[float]] = None       # executed buy quantities (length G)
+    econ_executed_sells: Optional[List[float]] = None      # executed sell quantities (length G)
+    econ_unmet_buys: Optional[List[float]] = None          # unmet portion of buy orders (length G)
+    econ_unmet_sells: Optional[List[float]] = None         # unmet portion of sell offers (length G)
+    econ_fill_rate_buys: Optional[List[float]] = None      # per-good buy fill rates (0-1)
+    econ_fill_rate_sells: Optional[List[float]] = None     # per-good sell fill rates (0-1)
 
     ration_unmet_demand: Optional[List[float]] = None
     ration_unmet_supply: Optional[List[float]] = None

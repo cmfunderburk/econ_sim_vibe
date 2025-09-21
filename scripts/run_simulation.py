@@ -166,20 +166,58 @@ def run_simulation(
                 if state.grid.is_in_marketplace(state.grid.get_position(a.agent_id))
             }
 
-            # Aggregate executed net trades per agent and good for this round
-            # Build matrix of zeros if no trades
+            # Aggregate executed trades by direction (buys / sells) and net per good
             n_goods = len(state.prices)
-            executed_net = {a.agent_id: [0.0] * n_goods for a in state.agents}
+            from typing import Dict, List as _List  # local import for typing clarity
+            executed_net: Dict[int, _List[float]] = {a.agent_id: [0.0] * n_goods for a in state.agents}
+            executed_buys: Dict[int, _List[float]] = {a.agent_id: [0.0] * n_goods for a in state.agents}
+            executed_sells: Dict[int, _List[float]] = {a.agent_id: [0.0] * n_goods for a in state.agents}
             for tr in state.trades:
+                if tr.quantity > 0:  # buy
+                    executed_buys[tr.agent_id][tr.good_id] += tr.quantity
+                elif tr.quantity < 0:  # sell (store positive magnitude in executed_sells)
+                    executed_sells[tr.agent_id][tr.good_id] += (-tr.quantity)
                 executed_net[tr.agent_id][tr.good_id] += tr.quantity
 
+            # Initialize enrichment placeholders (None when no market this round)
             unmet_demand = None
             unmet_supply = None
+            from typing import Optional as _Optional
+            per_agent_requested_buys: Dict[int, _Optional[_List[float]]] = {a.agent_id: None for a in state.agents}
+            per_agent_requested_sells: Dict[int, _Optional[_List[float]]] = {a.agent_id: None for a in state.agents}
+            per_agent_unmet_buys: Dict[int, _Optional[_List[float]]] = {a.agent_id: None for a in state.agents}
+            per_agent_unmet_sells: Dict[int, _Optional[_List[float]]] = {a.agent_id: None for a in state.agents}
+            per_agent_fill_buy: Dict[int, _Optional[_List[float]]] = {a.agent_id: None for a in state.agents}
+            per_agent_fill_sell: Dict[int, _Optional[_List[float]]] = {a.agent_id: None for a in state.agents}
+
             if state.last_market_result is not None:
                 unmet_demand = state.last_market_result.unmet_demand.tolist()
                 unmet_supply = state.last_market_result.unmet_supply.tolist()
+                diag = state.last_market_result.rationing_diagnostics
+                if diag is not None:
+                    # Populate per-agent diagnostics converting np.ndarray to list[float]
+                    for agent_id, arr in diag.agent_unmet_buys.items():
+                        per_agent_unmet_buys[agent_id] = arr.tolist()
+                    for agent_id, arr in diag.agent_unmet_sells.items():
+                        per_agent_unmet_sells[agent_id] = arr.tolist()
+                    for agent_id, arr in diag.agent_fill_rates_buy.items():
+                        per_agent_fill_buy[agent_id] = arr.tolist()
+                    for agent_id, arr in diag.agent_fill_rates_sell.items():
+                        per_agent_fill_sell[agent_id] = arr.tolist()
+                # Requested orders are not yet surfaced directly on state; reconstruct using executed + unmet
+                # If diagnostics present we have unmet arrays; reconstruct buys = executed_buys + unmet_buys, sells likewise.
+                for agent in state.agents:
+                    agent_id = agent.agent_id
+                    unmet_buys = per_agent_unmet_buys[agent_id]
+                    unmet_sells = per_agent_unmet_sells[agent_id]
+                    if unmet_buys is not None and unmet_sells is not None:
+                        rb: _List[float] = [executed_buys[agent_id][g] + unmet_buys[g] for g in range(n_goods)]
+                        rs: _List[float] = [executed_sells[agent_id][g] + unmet_sells[g] for g in range(n_goods)]
+                        per_agent_requested_buys[agent_id] = rb
+                        per_agent_requested_sells[agent_id] = rs
 
-            records = []
+            from typing import List as _ListRR
+            records: _ListRR[RoundLogRecord] = []  # type: ignore[name-defined]
             for agent in state.agents:
                 pos = state.grid.get_position(agent.agent_id)
                 # Compute simple utility snapshot (total endowment bundle)
@@ -197,6 +235,14 @@ def run_simulation(
                         spatial_in_marketplace=agent.agent_id in marketplace_ids,
                         econ_prices=state.prices.tolist(),
                         econ_executed_net=executed_net[agent.agent_id],
+                        econ_requested_buys=per_agent_requested_buys[agent.agent_id],
+                        econ_requested_sells=per_agent_requested_sells[agent.agent_id],
+                        econ_executed_buys=executed_buys[agent.agent_id],
+                        econ_executed_sells=executed_sells[agent.agent_id],
+                        econ_unmet_buys=per_agent_unmet_buys[agent.agent_id],
+                        econ_unmet_sells=per_agent_unmet_sells[agent.agent_id],
+                        econ_fill_rate_buys=per_agent_fill_buy[agent.agent_id],
+                        econ_fill_rate_sells=per_agent_fill_sell[agent.agent_id],
                         ration_unmet_demand=unmet_demand,
                         ration_unmet_supply=unmet_supply,
                         wealth_travel_cost=state.agent_travel_costs[agent.agent_id],

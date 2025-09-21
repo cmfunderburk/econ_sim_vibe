@@ -42,7 +42,7 @@ Robustness and observability improvements have been added since the initial Phas
 
 - Solver fallback: Adaptive tâtonnement engages automatically if primary `fsolve` convergence is poor, guaranteeing non-worsening residuals.
 - Enhanced invariants: Movement monotonicity, randomized conservation fuzz, per-agent value feasibility proxy.
-- Structured logging hardening: Canonical schema guard test ensures field stability (`SCHEMA_VERSION=1.0.0`).
+- Structured logging hardening: Canonical schema guard test ensures field stability (`SCHEMA_VERSION=1.1.0`). Added enriched per-agent diagnostics (requested/executed buys & sells, unmet components, fill rates) as additive fields.
 - Compression support: Optional gzip for JSONL and Parquet outputs via `RunLogger(compress=True)`.
 - Financing mode tagging: All records now populate `financing_mode="PERSONAL"` (foundation for future multi-mode analysis).
 - Configuration validation: Early aggregated validation (`validate_simulation_config`) catches invalid grid / marketplace / agent parameter combinations.
