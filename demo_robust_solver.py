@@ -139,14 +139,20 @@ def demonstrate_performance_comparison():
     print("\nOriginal Solver:")
     orig = results['original_solver']
     print(f"  Success rate: {orig['success_rate']:.1%}")
-    print(f"  Average time: {orig['avg_time']:.6f} ± {orig['std_time']:.6f} seconds")
-    print(f"  Time range: {orig['min_time']:.6f} - {orig['max_time']:.6f} seconds")
+    if orig['avg_time'] is not None:
+        print(f"  Average time: {orig['avg_time']:.6f} ± {orig['std_time']:.6f} seconds")
+        print(f"  Time range: {orig['min_time']:.6f} - {orig['max_time']:.6f} seconds")
+    else:
+        print("  Average time: N/A (all trials failed)")
     
     print("\nRobust Solver:")
     robust = results['robust_solver']
     print(f"  Success rate: {robust['success_rate']:.1%}")
-    print(f"  Average time: {robust['avg_time']:.6f} ± {robust['std_time']:.6f} seconds")
-    print(f"  Time range: {robust['min_time']:.6f} - {robust['max_time']:.6f} seconds")
+    if robust['avg_time'] is not None:
+        print(f"  Average time: {robust['avg_time']:.6f} ± {robust['std_time']:.6f} seconds")
+        print(f"  Time range: {robust['min_time']:.6f} - {robust['max_time']:.6f} seconds")
+    else:
+        print("  Average time: N/A (all trials failed)")
     
     if orig['avg_time'] and robust['avg_time']:
         if robust['avg_time'] < orig['avg_time']:

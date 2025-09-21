@@ -35,10 +35,6 @@ from econ.equilibrium_robust import (
 from econ.equilibrium import solve_walrasian_equilibrium, compute_excess_demand
 from constants import SOLVER_TOL, FEASIBILITY_TOL
 
-# Import test categorization markers
-from tests.test_categorization import economic_core, robustness, real_functions
-
-
 @pytest.mark.economic_core
 @pytest.mark.real_functions
 class TestRobustEquilibriumBasics:
@@ -277,6 +273,9 @@ class TestPerformanceAndScalability:
         
     def test_larger_economy_scalability(self):
         """Test solver performance with larger number of agents."""
+        # Set seed for deterministic behavior
+        np.random.seed(42)
+        
         # Create 5-agent, 3-good economy
         agents = []
         for i in range(5):

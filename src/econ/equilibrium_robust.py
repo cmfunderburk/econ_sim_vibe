@@ -150,9 +150,12 @@ class RobustEquilibriumSolver:
                         )
                         return prices, z_rest_norm, walras_dot, 'converged', diagnostics
                     return prices, z_rest_norm, walras_dot, 'converged'
+            else:
+                logger.warning("Newton-Raphson failed to converge")
+                fallback_attempts.append('newton_raphson_no_convergence')
         except Exception as e:
             logger.warning(f"Newton-Raphson failed: {e}")
-            fallback_attempts.append('newton_raphson_failed')
+            fallback_attempts.append('newton_raphson_exception')
             
         # Method 2: Broyden's quasi-Newton method
         try:
@@ -174,9 +177,12 @@ class RobustEquilibriumSolver:
                         )
                         return prices, z_rest_norm, walras_dot, 'converged', diagnostics
                     return prices, z_rest_norm, walras_dot, 'converged'
+            else:
+                logger.warning("Broyden's method failed to converge")
+                fallback_attempts.append('broyden_no_convergence')
         except Exception as e:
             logger.warning(f"Broyden's method failed: {e}")
-            fallback_attempts.append('broyden_failed')
+            fallback_attempts.append('broyden_exception')
             
         # Method 3: Tâtonnement iterative process
         try:
@@ -199,9 +205,12 @@ class RobustEquilibriumSolver:
                         )
                         return prices, z_rest_norm, walras_dot, status, diagnostics
                     return prices, z_rest_norm, walras_dot, status
+            else:
+                logger.warning("Tâtonnement failed to converge")
+                fallback_attempts.append('tatonnement_no_convergence')
         except Exception as e:
             logger.warning(f"Tâtonnement failed: {e}")
-            fallback_attempts.append('tatonnement_failed')
+            fallback_attempts.append('tatonnement_exception')
             
         # Emergency fallback: uniform prices with relaxed tolerance
         logger.warning("All methods failed, using emergency uniform price fallback")
