@@ -144,31 +144,16 @@ orders = _generate_agent_orders(agents, prices, travel_costs)
 
 #### 2.4 Update Simulation Runner Integration
 **File**: `scripts/run_simulation.py`
-**Function**: `generate_travel_adjusted_orders()`
+**Location**: Inside `run_simulation_round`
 
-**Replace the entire function with**:
+Ensure the simulation calls the unified clearing API with travel costs directly:
 ```python
-def execute_marketplace_clearing(agents, prices, agent_travel_costs):
-    """Execute constrained clearing with travel-adjusted budgets.
-    
-    This integrates travel costs into the market clearing mechanism
-    by passing travel cost data to the order generation system.
-    """
-    from src.econ.market import execute_constrained_clearing
-    
-    # Pass travel costs to market clearing for budget adjustment
-    return execute_constrained_clearing(agents, prices, agent_travel_costs)
-```
-
-**Update the main simulation loop call**:
-**Find**:
-```python
-trades = execute_constrained_clearing(viable_agents, prices)
-```
-
-**Replace With**:
-```python
-trades = execute_marketplace_clearing(viable_agents, prices, state.agent_travel_costs)
+market_result = execute_constrained_clearing(
+    viable_agents,
+    prices,
+    capacity=None,
+    travel_costs=state.agent_travel_costs,
+)
 ```
 
 ### Testing Step 2

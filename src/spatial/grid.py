@@ -206,28 +206,58 @@ class Grid:
         if self.is_in_marketplace(current_pos):
             return 0
 
-        # Simple myopic movement toward center
+        return self._move_agent_toward_target(agent_id, marketplace_center)
+
+    def move_agent_toward_position(self, agent_id: int, target: Position) -> int:
+        """Move agent one step toward an arbitrary target position.
+
+        Args:
+            agent_id: Agent to move
+            target: Target grid position
+
+        Returns:
+            Manhattan distance traveled (0 or 1)
+
+        Raises:
+            KeyError: If agent not found on grid
+            ValueError: If target lies outside the grid bounds
+        """
+        if not self._is_valid_position(target):
+            raise ValueError(f"Target position {target} outside grid bounds")
+
+        return self._move_agent_toward_target(agent_id, target)
+
+    def _move_agent_toward_target(self, agent_id: int, target: Position) -> int:
+        """Internal helper to move an agent one step toward a target position."""
+        if agent_id not in self.agent_positions:
+            raise KeyError(f"Agent {agent_id} not found on grid")
+
+        current_pos = self.agent_positions[agent_id]
+
+        # No movement needed if already at target
+        if current_pos == target:
+            return 0
+
         new_x = current_pos.x
         new_y = current_pos.y
 
         # Move in x-direction first (lexicographic tie-breaking)
-        if current_pos.x < marketplace_center.x:
+        if current_pos.x < target.x:
             new_x += 1
-        elif current_pos.x > marketplace_center.x:
+        elif current_pos.x > target.x:
             new_x -= 1
         # Then move in y-direction if x-movement didn't occur
-        elif current_pos.y < marketplace_center.y:
+        elif current_pos.y < target.y:
             new_y += 1
-        elif current_pos.y > marketplace_center.y:
+        elif current_pos.y > target.y:
             new_y -= 1
 
-        # Execute movement if different from current position
         new_position = Position(new_x, new_y)
         if new_position != current_pos:
             self.move_agent(agent_id, new_position)
-            return 1  # Moved one step
-        else:
-            return 0  # No movement needed
+            return 1
+
+        return 0
 
     def _is_valid_position(self, position: Position) -> bool:
         """Check if position is within grid boundaries.

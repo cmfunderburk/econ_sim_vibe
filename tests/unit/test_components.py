@@ -21,6 +21,7 @@ except ImportError:
 
 from core.agent import Agent
 from core.types import Trade, SimulationState
+from spatial.grid import Grid, Position
 
 
 class TestAgent:
@@ -224,6 +225,22 @@ class TestAgent:
         agent.move_to(new_position)
         assert agent.position == new_position
 
+    def test_home_position_defaults_and_copy(self):
+        """Agents default their home position and preserve it on copy."""
+        agent = Agent(
+            agent_id=1,
+            alpha=[0.6, 0.4],
+            home_endowment=[10.0, 5.0],
+            personal_endowment=[2.0, 1.0],
+            position=(4, 2),
+        )
+
+        assert agent.home_position == (4, 2)
+
+        cloned = agent.copy()
+        assert cloned.home_position == (4, 2)
+        assert cloned.position == (4, 2)
+
     def test_marketplace_detection(self):
         """Test marketplace boundary detection."""
         agent = Agent(
@@ -271,6 +288,43 @@ class TestAgent:
         # Test zero distance
         agent.move_to(marketplace_center)
         assert agent.distance_to_marketplace(marketplace_center) == 0
+
+
+class TestGridMovement:
+    """Test suite for grid movement helpers."""
+
+    def test_move_agent_toward_position(self):
+        """Agents move one step toward arbitrary targets within bounds."""
+        grid = Grid(width=5, height=5, marketplace_width=1, marketplace_height=1)
+        start = Position(0, 0)
+        grid.add_agent(agent_id=7, position=start)
+
+        steps = grid.move_agent_toward_position(7, Position(3, 2))
+        assert steps == 1
+        assert grid.get_position(7) == Position(1, 0)
+
+        # Subsequent moves continue advancing
+        steps = grid.move_agent_toward_position(7, Position(3, 2))
+        assert steps == 1
+        assert grid.get_position(7) == Position(2, 0)
+
+    def test_move_agent_toward_position_validates_bounds(self):
+        """Moving toward out-of-bounds targets is rejected."""
+        grid = Grid(width=4, height=4, marketplace_width=2, marketplace_height=2)
+        grid.add_agent(agent_id=3, position=Position(1, 1))
+
+        with pytest.raises(ValueError, match="Target position"):
+            grid.move_agent_toward_position(3, Position(5, 5))
+
+    def test_move_agent_toward_marketplace_no_move_inside(self):
+        """Agents already inside the marketplace do not move toward center."""
+        grid = Grid(width=4, height=4, marketplace_width=2, marketplace_height=2)
+        marketplace_center = grid.get_marketplace_center()
+        grid.add_agent(agent_id=5, position=marketplace_center)
+
+        steps = grid.move_agent_toward_marketplace(5)
+        assert steps == 0
+        assert grid.get_position(5) == marketplace_center
 
 
 class TestTradeDataclass:

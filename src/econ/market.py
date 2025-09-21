@@ -71,6 +71,7 @@ class AgentOrder:
     buy_orders: np.ndarray
     sell_orders: np.ndarray
     max_sell_capacity: np.ndarray
+    budget: float = 0.0
 
     def __post_init__(self):
         """Validate order consistency."""
@@ -96,7 +97,9 @@ class AgentOrder:
             raise ValueError(f"sell_orders exceed inventory capacity: excess={excess}")
 
 
-def _generate_agent_orders(agents: List, prices: np.ndarray) -> List[AgentOrder]:
+def _generate_agent_orders(
+    agents: List, prices: np.ndarray, travel_costs: Optional[Dict[int, float]] = None
+) -> List[AgentOrder]:
     """Generate buy/sell orders for all marketplace agents.
 
     This computes each agent's desired trades based on Cobb-Douglas optimization
@@ -119,8 +122,9 @@ def _generate_agent_orders(agents: List, prices: np.ndarray) -> List[AgentOrder]
         - Sell orders: current personal inventory minus desired quantity
         - Both are clipped to non-negative values
         - Personal inventory serves as hard constraint on sell capacity
+        - Optional travel_costs deduct budget-side wealth before computing demand
     """
-    orders = []
+    orders: List[AgentOrder] = []
     n_goods = len(prices)
 
     for agent in agents:
@@ -128,19 +132,18 @@ def _generate_agent_orders(agents: List, prices: np.ndarray) -> List[AgentOrder]
         current_personal = agent.personal_endowment.copy()
 
         # Wealth from TOTAL endowment per SPECIFICATION.md
-        # This establishes theoretical clearing prices; execution still limited by personal inventory
-        # Budget-constrained wealth: w_i = max(0, p·ω_i^total - κ·d_i)
-        # For now, implementing without travel costs (κ·d_i = 0)
-        total_wealth = np.dot(prices, agent.total_endowment)
-        
-        # TODO: Add travel cost deduction when spatial friction is implemented
-        # adjusted_wealth = max(0.0, total_wealth - travel_cost)
-        
-        # Compute optimal Cobb-Douglas demand using total wealth (theoretical)
-        # Execution will be constrained by personal inventory limits
-        # x_j = α_j * wealth / p_j
-        if total_wealth > FEASIBILITY_TOL:
-            desired_quantities = agent.alpha * total_wealth / prices
+        total_wealth = float(np.dot(prices, agent.total_endowment))
+
+        # Apply optional travel-cost deduction if provided
+        travel_cost = 0.0
+        if travel_costs and agent.agent_id in travel_costs:
+            travel_cost = float(travel_costs[agent.agent_id])
+
+        adjusted_wealth = max(0.0, total_wealth - travel_cost)
+
+        # Compute optimal Cobb-Douglas demand using adjusted wealth
+        if adjusted_wealth > FEASIBILITY_TOL:
+            desired_quantities = agent.alpha * adjusted_wealth / prices
         else:
             # Zero wealth agent cannot trade
             desired_quantities = np.zeros(n_goods)
@@ -149,8 +152,8 @@ def _generate_agent_orders(agents: List, prices: np.ndarray) -> List[AgentOrder]
         net_orders = desired_quantities - current_personal
 
         # Separate into buy and sell orders
-        buy_orders = np.maximum(net_orders, 0.0)  # Positive net = want to buy
-        sell_orders = np.maximum(-net_orders, 0.0)  # Negative net = want to sell
+        buy_orders = np.maximum(net_orders, 0.0)
+        sell_orders = np.maximum(-net_orders, 0.0)
 
         # Personal inventory constrains maximum sells
         max_sell_capacity = current_personal.copy()
@@ -160,8 +163,8 @@ def _generate_agent_orders(agents: List, prices: np.ndarray) -> List[AgentOrder]
 
         # Budget constraint: p·buy ≤ p·sell (pure exchange constraint)
         # With simplified inventory model, agents carry full inventory so this is enforceable
-        buy_value = np.dot(prices, buy_orders)
-        sell_value = np.dot(prices, sell_orders)
+        buy_value = float(np.dot(prices, buy_orders))
+        sell_value = float(np.dot(prices, sell_orders))
         
         if buy_value > sell_value + FEASIBILITY_TOL:
             # Scale down buy orders to respect budget constraint
@@ -169,8 +172,7 @@ def _generate_agent_orders(agents: List, prices: np.ndarray) -> List[AgentOrder]
                 scaling_factor = sell_value / buy_value
                 buy_orders *= scaling_factor
                 logger.debug(
-                    f"Agent {agent.agent_id}: buy value {buy_value:.4f} > sell value {sell_value:.4f}, "
-                    f"scaled buy orders by factor {scaling_factor:.4f}"
+                    f"Agent {agent.agent_id}: scaled buy orders by {scaling_factor:.4f}"
                 )
             else:
                 # Cannot buy anything if not selling anything of value
@@ -185,12 +187,14 @@ def _generate_agent_orders(agents: List, prices: np.ndarray) -> List[AgentOrder]
                 buy_orders=buy_orders,
                 sell_orders=sell_orders,
                 max_sell_capacity=max_sell_capacity,
+                budget=float(adjusted_wealth),
             )
         )
 
         logger.debug(
             f"Agent {agent.agent_id}: total_wealth={total_wealth:.4f}, "
-            f"desired={desired_quantities}, current={current_personal}, "
+            f"adjusted_wealth={adjusted_wealth:.4f}, desired={desired_quantities}, "
+            f"current={current_personal}, "
             f"buy={buy_orders}, sell={sell_orders}"
         )
 
@@ -516,7 +520,10 @@ def _convert_to_trades(
 
 
 def execute_constrained_clearing(
-    agents: List, prices: np.ndarray, capacity: Optional[np.ndarray] = None
+    agents: List,
+    prices: np.ndarray,
+    capacity: Optional[np.ndarray] = None,
+    travel_costs: Optional[Dict[int, float]] = None,
 ) -> MarketResult:
     """Execute constrained market clearing with proportional rationing.
 
@@ -540,6 +547,7 @@ def execute_constrained_clearing(
         agents: List of Agent objects currently in marketplace
         prices: Equilibrium price vector from solve_equilibrium
         capacity: Optional per-good throughput limits
+        travel_costs: Optional budget deductions per agent (numéraire units)
 
     Returns:
         MarketResult with executed trades and clearing statistics
@@ -576,8 +584,8 @@ def execute_constrained_clearing(
 
     n_goods = len(prices)
 
-    # Step 1: Generate agent orders
-    orders = _generate_agent_orders(agents, prices)
+    # Step 1: Generate agent orders (apply travel-cost adjustments when provided)
+    orders = _generate_agent_orders(agents, prices, travel_costs=travel_costs)
 
     # Step 2: Compute market totals
     total_buys, total_sells = _compute_market_totals(orders)

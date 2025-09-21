@@ -11,6 +11,7 @@ import argparse
 import sys
 import random
 import json
+from enum import Enum
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
@@ -23,6 +24,15 @@ from src.core.agent import Agent
 from src.econ.equilibrium import solve_walrasian_equilibrium
 from src.econ.market import execute_constrained_clearing
 from src.spatial.grid import Grid, Position, create_random_positions
+
+
+class AgentPhase(str, Enum):
+    """Lifecycle phases for agent movement between home and marketplace."""
+
+    HOME_PREP = "home_prep"
+    TO_MARKET = "to_market"
+    AT_MARKET = "at_market"
+    TO_HOME = "to_home"
 
 
 @dataclass
@@ -52,6 +62,7 @@ class SimulationState:
     trades: List[Any]
     # Track cumulative travel costs for each agent
     agent_travel_costs: Dict[int, float]  # agent_id -> cumulative travel cost
+    agent_phases: Dict[int, AgentPhase]
 
 
 def load_config(config_path: Path) -> SimulationConfig:
@@ -109,12 +120,14 @@ def initialize_simulation(config: SimulationConfig) -> SimulationState:
         personal_endowment = np.random.exponential(1.0, config.n_goods)
 
         # Create agent
+        agent_home = (positions[i].x, positions[i].y)
         agent = Agent(
             agent_id=i,
             alpha=alpha,
             home_endowment=home_endowment,
             personal_endowment=personal_endowment,
-            position=(positions[i].x, positions[i].y),
+            position=agent_home,
+            home_position=agent_home,
         )
         agents.append(agent)
 
@@ -128,103 +141,8 @@ def initialize_simulation(config: SimulationConfig) -> SimulationState:
         prices=np.ones(config.n_goods),  # Initial uniform prices
         trades=[],
         agent_travel_costs={agent.agent_id: 0.0 for agent in agents},
+        agent_phases={agent.agent_id: AgentPhase.HOME_PREP for agent in agents},
     )
-
-
-def generate_travel_adjusted_orders(agents, prices, agent_travel_costs):
-    """Generate agent orders using travel-adjusted budgets.
-
-    Implements budget constraint: w_i = max(0, p·ω_total - κ·d_i)
-    where κ·d_i is cumulative travel cost for agent i.
-    """
-    from src.econ.market import AgentOrder
-    from src.constants import FEASIBILITY_TOL
-
-    orders = []
-    n_goods = len(prices)
-
-    for agent in agents:
-        # Current personal inventory (tradeable at marketplace)
-        current_personal = agent.personal_endowment.copy()
-
-        # Travel-adjusted wealth: w_i = max(0, p·ω_total - κ·d_i)
-        base_wealth = np.dot(prices, agent.total_endowment)
-        cumulative_travel_cost = agent_travel_costs.get(agent.agent_id, 0.0)
-        travel_adjusted_wealth = max(0.0, base_wealth - cumulative_travel_cost)
-
-        # Compute optimal Cobb-Douglas demand using travel-adjusted wealth
-        if travel_adjusted_wealth > FEASIBILITY_TOL:
-            desired_quantities = agent.alpha * travel_adjusted_wealth / prices
-        else:
-            # Zero wealth agent cannot trade
-            desired_quantities = np.zeros(n_goods)
-
-        # Calculate net orders: desired - current personal inventory
-        net_orders = desired_quantities - current_personal
-
-        # Separate into buy and sell orders
-        buy_orders = np.maximum(net_orders, 0.0)  # Positive net = want to buy
-        sell_orders = np.maximum(-net_orders, 0.0)  # Negative net = want to sell
-
-        # Personal inventory constrains maximum sells
-        max_sell_capacity = current_personal.copy()
-        sell_orders = np.minimum(sell_orders, max_sell_capacity)
-
-        orders.append(
-            AgentOrder(
-                agent_id=agent.agent_id,
-                buy_orders=buy_orders,
-                sell_orders=sell_orders,
-                max_sell_capacity=max_sell_capacity,
-            )
-        )
-
-    return orders
-
-
-def execute_constrained_clearing_from_orders(orders, agents, prices):
-    """Execute market clearing from pre-computed orders."""
-    from src.econ.market import (
-        _compute_market_totals,
-        _execute_proportional_rationing,
-        _convert_to_trades,
-        MarketResult,
-    )
-
-    # Compute market totals
-    total_buys, total_sells = _compute_market_totals(orders)
-
-    # Execute proportional rationing
-    executed_buys_dict, executed_sells_dict, executed_volumes = (
-        _execute_proportional_rationing(orders, total_buys, total_sells, capacity=None)
-    )
-
-    # Compute rationing diagnostics 
-    from src.econ.market import _compute_rationing_diagnostics
-    rationing_diagnostics = _compute_rationing_diagnostics(
-        orders, executed_buys_dict, executed_sells_dict, total_buys, total_sells
-    )
-
-    # Create trade records
-    executed_trades = _convert_to_trades(
-        executed_buys_dict, executed_sells_dict, prices
-    )
-
-    # Compute unmet demand/supply
-    unmet_demand = total_buys - executed_volumes
-    unmet_supply = total_sells - executed_volumes
-
-    result = MarketResult(
-        executed_trades=executed_trades,
-        unmet_demand=unmet_demand,
-        unmet_supply=unmet_supply,
-        total_volume=executed_volumes,
-        prices=prices.copy(),
-        participant_count=len(agents),
-        rationing_diagnostics=rationing_diagnostics,
-    )
-
-    return result
 
 
 def run_simulation_round(
@@ -232,26 +150,67 @@ def run_simulation_round(
 ) -> SimulationState:
     """Execute one round of spatial simulation."""
 
-    # 1. Move agents toward marketplace (one step each)
+    # 1. Home preparation: load inventory when agents are at home
     for agent in state.agents:
-        distance_moved = state.grid.move_agent_toward_marketplace(agent.agent_id)
-        # Update agent's position
-        new_pos = state.grid.get_position(agent.agent_id)
-        agent.position = (new_pos.x, new_pos.y)
+        phase = state.agent_phases[agent.agent_id]
 
-        # Apply movement cost (budget reduction)
+        if phase == AgentPhase.HOME_PREP:
+            if agent.is_at_home(agent.home_position):
+                agent.load_inventory_for_travel()
+                state.agent_phases[agent.agent_id] = AgentPhase.TO_MARKET
+            else:
+                # Agent is misplaced; send them home before loading
+                state.agent_phases[agent.agent_id] = AgentPhase.TO_HOME
+
+    # 2. Move agents according to their lifecycle phase
+    for agent in state.agents:
+        phase = state.agent_phases[agent.agent_id]
+        distance_moved = 0
+
+        if phase == AgentPhase.TO_MARKET:
+            distance_moved = state.grid.move_agent_toward_marketplace(agent.agent_id)
+
+            current_pos = state.grid.get_position(agent.agent_id)
+            agent.position = (current_pos.x, current_pos.y)
+
+            if state.grid.is_in_marketplace(current_pos):
+                state.agent_phases[agent.agent_id] = AgentPhase.AT_MARKET
+
+        elif phase == AgentPhase.TO_HOME:
+            home_position = Position(*agent.home_position)
+            distance_moved = state.grid.move_agent_toward_position(
+                agent.agent_id, home_position
+            )
+
+            current_pos = state.grid.get_position(agent.agent_id)
+            agent.position = (current_pos.x, current_pos.y)
+
+            if agent.is_at_home(agent.home_position):
+                agent.deposit_inventory_at_home()
+                state.agent_travel_costs[agent.agent_id] = 0.0
+                state.agent_phases[agent.agent_id] = AgentPhase.HOME_PREP
+
+        else:
+            # Agent stays in place (either preparing at home or trading in marketplace)
+            current_pos = state.grid.get_position(agent.agent_id)
+            agent.position = (current_pos.x, current_pos.y)
+
         if distance_moved > 0 and config.movement_cost > 0:
-            # Implement travel cost integration: track cumulative travel costs per agent
             travel_cost_this_round = config.movement_cost * distance_moved
             state.agent_travel_costs[agent.agent_id] += travel_cost_this_round
 
-    # 2. Determine marketplace participants
-    marketplace_agent_ids = state.grid.get_agents_in_marketplace()
+    # 3. Determine marketplace participants (phase-aware)
+    marketplace_agent_ids = {
+        agent.agent_id
+        for agent in state.agents
+        if state.agent_phases[agent.agent_id] == AgentPhase.AT_MARKET
+        and state.grid.is_in_marketplace(state.grid.get_position(agent.agent_id))
+    }
     marketplace_agents = [
         agent for agent in state.agents if agent.agent_id in marketplace_agent_ids
     ]
 
-    # 3. Solve equilibrium with marketplace participants only
+    # 4. Solve equilibrium with marketplace participants only
     if len(marketplace_agents) >= 2:
         # Filter zero-wealth agents for numerical stability
         viable_agents = []
@@ -269,15 +228,23 @@ def run_simulation_round(
                     state.prices = prices
 
                     # 4. Execute market clearing with travel-adjusted budgets
-                    orders = generate_travel_adjusted_orders(
-                        viable_agents, prices, state.agent_travel_costs
+                    # Use core market API and pass cumulative travel costs
+                    from src.econ.market import apply_trades_to_agents
+
+                    market_result = execute_constrained_clearing(
+                        viable_agents,
+                        prices,
+                        capacity=None,
+                        travel_costs=state.agent_travel_costs,
                     )
-                    market_result = execute_constrained_clearing_from_orders(
-                        orders, viable_agents, prices
-                    )
-                    state.trades = (
-                        market_result.executed_trades
-                    )  # Extract trades from MarketResult
+
+                    # Apply executed trades to agent inventories
+                    apply_trades_to_agents(viable_agents, market_result.executed_trades)
+                    state.trades = market_result.executed_trades
+
+                    # After trading, agents head back home to complete the cycle
+                    for agent in viable_agents:
+                        state.agent_phases[agent.agent_id] = AgentPhase.TO_HOME
                 else:
                     print(
                         f"Warning: Equilibrium solver failed to converge in round {state.round}, z_rest_norm={z_rest_norm}"

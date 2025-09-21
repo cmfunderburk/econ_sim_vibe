@@ -257,8 +257,7 @@ class TestTravelCostIntegration:
 
     def test_travel_cost_reduces_effective_wealth(self):
         """Test that travel costs reduce effective wealth for order generation."""
-        # This would test the generate_travel_adjusted_orders function
-        # from scripts/run_simulation.py if it were importable
+        # Mirrors the travel-cost adjustment performed inside execute_constrained_clearing
         
         agent = Agent(
             agent_id=1,

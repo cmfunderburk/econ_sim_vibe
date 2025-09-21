@@ -35,6 +35,7 @@ class Agent:
         home_endowment: np.ndarray,
         personal_endowment: np.ndarray,
         position: Tuple[int, int] = (0, 0),
+        home_position: Optional[Tuple[int, int]] = None,
     ):
         """
         Initialize agent with preferences and endowments.
@@ -89,6 +90,7 @@ class Agent:
 
         # Spatial positioning
         self.position = position
+        self.home_position = home_position if home_position is not None else position
 
         # Ensure consistent dimensions
         n_goods = len(self.alpha)
@@ -332,6 +334,7 @@ class Agent:
             home_endowment=self.home_endowment.copy(),
             personal_endowment=self.personal_endowment.copy(),
             position=self.position,
+            home_position=self.home_position,
         )
 
     def __repr__(self) -> str:
