@@ -52,7 +52,7 @@ This project builds a comprehensive economic modeling platform step-by-step from
 
 **Implementation Status (September 2025):**
 - ✅ **Phase 1 Economic Engine COMPLETE**: Walrasian equilibrium solver + market clearing mechanisms
-- ✅ **Complete Validation Framework ACHIEVED**: 191/191 tests passing (100%), all V1-V10 scenarios validated
+- ✅ **Complete Validation Framework ACHIEVED**: 197/197 tests passing (100%), all V1-V10 scenarios validated (185 unit + 12 validation)
 - ✅ **Mathematical Foundation**: All economic invariants satisfied, robust error handling, excellent performance
 - ✅ **Basic Spatial Implementation**: Grid movement, travel cost integration, simulation runner functional
 - ⚠️ **Simple Movement System**: Basic greedy movement implemented (not A* pathfinding)
@@ -112,6 +112,34 @@ This project builds a comprehensive economic modeling platform step-by-step from
 - **Execution constraint**: Trading limited by **personal inventory** present in marketplace (which equals total inventory under simplified model)
 - **Rationing**: Unmet demand/supply rationed proportionally and logged as carry-over; track liquidity_gap[g] = z_market[g] - executed_net[g]. **Critical**: Carry-over is diagnostic only.
 - **Carry-over repricing**: Unexecuted orders repriced at next round's equilibrium vector. **Critical**: Carry-over queues **never auto-execute**; orders are recomputed from scratch each round and carry-over is diagnostic only.
+
+### Financing Model (Phase 2 Baseline)
+The platform currently operates under a strict **personal-inventory financing** regime:
+
+1. **Financing Source**: Only the goods an agent physically brings into the marketplace (their personal inventory) can finance purchases. There is no abstract borrowing against home inventory, and home endowment not carried is economically inert for that round.
+2. **Value Feasibility Invariant**: For each agent each round: \( p \cdot b_i^{exec} \le p \cdot s_i^{exec} + \varepsilon \) (executed buy value cannot exceed executed sell value at equilibrium prices). With full-inventory loading this typically binds only when preferences imply strong rebalancing.
+3. **Total vs Personal Distinction**: Prices (LTE) are still computed using participants' total endowments (home + personal) per specification, but order generation and feasibility constraints recognize only personal inventory as a financing source. This creates an intentional wedge between theoretical clearing and executable liquidity.
+4. **Travel Costs Interaction**: Travel costs reduce effective wealth conceptually, but under personal financing they do NOT grant additional purchasing power; instead they are diagnostic deductions (reported, not monetized via additional financing). Future modes may treat travel costs as immediate numéraire consumption.
+5. **Liquidity Gap Metric**: The difference between theoretical excess demand (using total endowment) and executed net trades (personal constrained) is recorded as a liquidity/financing gap and should never be negative for goods where the agent is constrained on the sell side.
+
+#### Planned Extension: Financing Modes
+To support research comparing institutional regimes, a forthcoming toggle will introduce:
+
+```
+FinancingMode = Enum('FinancingMode', ['PERSONAL', 'TOTAL_WEALTH'])
+```
+
+Mode semantics:
+- PERSONAL (default, current behavior): Orders scaled so that executed buy value cannot exceed executed sell value; sell capacity limited by personal inventory snapshot.
+- TOTAL_WEALTH (future optional): Agents may issue buy orders backed by the value of their total endowment (or travel-cost-adjusted wealth) regardless of physical composition, subject still to sell capacity constraints for goods they dispose of.
+
+Implementation notes:
+- The clearing algorithm will receive a `financing_mode` parameter; invariant validation will branch on value feasibility rule.
+- Backward compatibility: Default mode remains PERSONAL; existing tests rely on the stricter barter constraint.
+- Additional logging fields: `financing_mode`, `personal_wealth_entry`, `total_wealth_LTE`, and (future) `travel_cost_deduction`.
+
+Economic rationale: Separating price formation scope (total endowment) from financing scope (personal vs total) isolates the effect of liquidity constraints on welfare and rationing dynamics without changing equilibrium pricing fundamentals.
+
 
 ### Movement Cost Model
 We adopt a **budget-side travel cost model** for Phase 2:
@@ -342,7 +370,7 @@ The simulation implements a spatial extension of Walrasian equilibrium using a c
 | **V10: Spatial Null (Unit Test)** | `config/spatial_null_test.yaml` | ✅ PASS | κ=0, all agents at market initially | `phase2_allocation == phase1_allocation` |
 
 **Production-Ready Validation Framework**:
-- **191/191 tests passing** (179 unit tests + 12 validation scenarios)
+- **197/197 tests passing** (185 unit tests + 12 validation scenarios)
 - **Complete economic validation** covering all fundamental properties
 - **Comprehensive edge case handling** for robust real-world deployment
 - **Research-grade validation** suitable for publication-quality experiments

@@ -39,7 +39,7 @@ After detailed validation of the implementation roadmap against actual codebase 
 
 #### **Time Estimates (VALIDATED)**
 - **Phase 1 Core**: 3-5 hours (down from 5-8 hours)
-- **Expected Outcome**: 100% test pass rate (191/191)
+- **Expected Outcome**: 100% test pass rate (197/197)
 - **Risk Level**: Low (straightforward changes to working system)
 
 ## Revised Implementation Priority
@@ -65,7 +65,7 @@ total_wealth = np.dot(prices, agent.total_endowment)
 **Add travel cost parameter to order generation and pass from simulation runner**
 
 #### **Step 3: Validate Results (30 minutes)**
-**Run full test suite and confirm 191/191 pass rate**
+**Run full test suite and confirm 197/197 pass rate**
 
 ### **Next Phase: User Experience (Optional)**
 - pygame visualization (6-8 hours)

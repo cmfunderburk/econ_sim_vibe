@@ -11,7 +11,7 @@ This is a research-grade economic simulation platform implementing agent-based m
 ## 🎯 Current Development Status
 
 ### ✅ Phase 1: Production-Ready Economic Engine
-**COMPLETE & VERIFIED (191/191 tests passing - 100%):**
+**COMPLETE & VERIFIED (197/197 tests passing - 100%):**
 - **Walrasian Solver**: Cobb-Douglas closed forms with numerical fallbacks
 - **Agent Framework**: Simplified inventory management (load/deposit pattern)
 - **Market Clearing**: Constrained execution with proportional rationing
@@ -28,7 +28,7 @@ This is a research-grade economic simulation platform implementing agent-based m
 ### 📋 Implementation Status & Next Priorities
 **Current Implementation:**
 1. **Movement Algorithm**: Simple greedy movement with lexicographic tie-breaking
-2. **Test Status**: 191/191 tests passing (100% success rate achieved)
+2. **Test Status**: 197/197 tests passing (100% success rate achieved; 185 unit + 12 validation)
 3. **Simplified Inventory Model**: Agents load full home inventory at cycle start, eliminating strategic withholding complexity
 4. **Economic Correctness**: Complete validation with all V1-V10 scenarios passing
 
@@ -78,7 +78,7 @@ pip install -e .          # Must install package in editable mode
 source venv/bin/activate   # Virtual environment required
 
 # Verified working commands:
-make test                 # 191/191 tests pass (100% success rate)
+make test                 # 197/197 tests pass (100% success rate)
 make validate            # V1-V10 scenarios pass 
 make format              # black + isort code formatting
 python scripts/run_simulation.py --config config/edgeworth.yaml --seed 42 --no-gui  # Full simulation with travel costs

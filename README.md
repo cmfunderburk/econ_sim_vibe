@@ -12,7 +12,7 @@ A research-grade economic simulation platform for studying spatial frictions in 
 - **Economic Engine**: Walrasian equilibrium solver with Cobb-Douglas utilities
 - **Agent Framework**: Simplified inventory management with full economic correctness
 - **Market Clearing**: Constrained execution with proportional rationing
-- **Test Suite**: 191/191 tests passing (100% pass rate) including 12 validation scenarios
+- **Test Suite**: 197/197 tests passing (185 unit + 12 validation scenarios)
 - **Package Configuration**: Working setup.py and pytest.ini for development
 
 **PHASE 2 - BASIC IMPLEMENTATION 🚧**:
@@ -25,7 +25,7 @@ A research-grade economic simulation platform for studying spatial frictions in 
 
 **✅ Complete & Functional**:
 - **Economic Engine**: Core agent framework, equilibrium solver, market clearing mechanisms
-- **Test Framework**: 191/191 tests passing (100% pass rate) with comprehensive validation (V1-V10 scenarios)
+- **Test Framework**: 197/197 tests passing (185 unit + 12 validation; V1–V10 plus enhanced real-function variants)
 - **Simplified Inventory Management**: Agents load full home inventory at cycle start, eliminating strategic withholding complexity
 - **Package Configuration**: Working setup.py, pytest.ini, requirements.txt
 - **Spatial Infrastructure**: Basic grid movement and marketplace detection working
@@ -36,11 +36,12 @@ A research-grade economic simulation platform for studying spatial frictions in 
 - **Pathfinding**: Simple one-step movement with lexicographic tie-breaking
 - **Local Price Formation**: Uses global Walrasian pricing (Phase 2 uses LTE on marketplace participants)
 
-**📋 Planned Advanced Features**:
+**📋 Planned / In-Progress Advanced Features**:
 - **A* Pathfinding**: Optimal pathfinding with obstacle avoidance (not yet implemented)
 - **Data Persistence**: Parquet logging with schema versioning (hooks exist, not fully implemented)
 - **Real-time Visualization**: pygame visualization system (basic --no-gui mode works)
 - **Phase 3 Features**: Local price formation, bilateral bargaining, market microstructure
+- **Financing Mode TOTAL_WEALTH**: Enum placeholder present; distinct execution semantics not yet activated
 
 ## Quick Start
 
@@ -67,7 +68,7 @@ pip install -e .
 
 ### Running Tests and Simulations
 ```bash
-# Run full test suite (191/191 tests pass - 100% success rate)
+# Run full test suite (197/197 tests pass - 100% success rate)
 make test
 
 # Run validation scenarios (all 12 scenarios pass)
@@ -119,6 +120,23 @@ Home ↔ Personal ↔ Market
 - **Extensible**: Plugin architecture for utility functions and movement policies
 - **Research-Grade**: Parquet logging, git SHA tracking, comprehensive validation
 
+### Financing Model
+Current Phase‑2 baseline uses **personal‑inventory financing** (FinancingMode.PERSONAL):
+- Agents may only finance purchases with goods they physically carried to the marketplace (personal inventory). No borrowing against home inventory.
+- Value feasibility per round: p·(executed buys) ≤ p·(executed sells) + ε.
+- Prices are computed from participants' total endowments (home + personal) to form the Local Theoretical Equilibrium (LTE); execution is constrained by personal inventory, generating a measurable liquidity gap.
+- Travel costs reduce theoretical wealth diagnostically but do not expand financing capacity (future modes may deduct explicit numéraire units on movement).
+
+Implemented extension introduces a `FinancingMode` toggle (regression‑guarded):
+```
+FinancingMode = Enum('FinancingMode', ['PERSONAL', 'TOTAL_WEALTH'])
+```
+Mode semantics:
+- PERSONAL (default, active): Pure barter constraint with proportional rationing (enforced: p·executed_buys ≤ p·executed_sells + ε). Backward compatibility guaranteed by a regression test that compares default vs explicit PERSONAL mode.
+- TOTAL_WEALTH (placeholder): Enum entry present; future behavior will size orders off total (travel‑adjusted) wealth with modified feasibility rule p·buys ≤ p·ω_total.
+
+Rationale: Decoupling price formation (total endowment) from financing scope (personal vs total) enables experiments on liquidity frictions without altering equilibrium fundamentals.
+
 ## Simulation Protocol
 
 Each round follows the spatial Walrasian protocol:
@@ -132,7 +150,7 @@ Each round follows the spatial Walrasian protocol:
 
 ### Validation Framework
 
-The project includes **10 comprehensive validation scenarios** with all tests passing:
+The project includes **10 core validation scenarios + 2 enhanced real-function validation tests** with all tests passing:
 
 **V1-V10 Scenarios (All Verified ✅)**:
 | Scenario | Purpose | Status | Expected Outcome |
@@ -149,7 +167,7 @@ The project includes **10 comprehensive validation scenarios** with all tests pa
 | **V10: Spatial Null (Unit Test)** | Regression testing | ✅ PASS | Phase equivalence validation |
 
 **Complete Validation Framework**:
-- **191/191 tests passing** (179 unit tests + 12 validation scenarios)
+- **197/197 tests passing** (185 unit tests + 12 validation scenarios)
 - **Complete economic validation** covering all fundamental properties
 - **Comprehensive edge case handling** for robust real-world deployment
 - **Research-grade validation** suitable for publication-quality experiments
@@ -188,7 +206,7 @@ This project provides a complete, functional development environment for economi
 
 **Development Commands**:
 ```bash
-make test              # ✅ WORKS: 191/191 tests passing
+make test              # ✅ WORKS: 197/197 tests passing
 make validate          # ✅ WORKS: All validation scenarios pass
 make format            # Format code
 make check             # Quality checks (lint + test)

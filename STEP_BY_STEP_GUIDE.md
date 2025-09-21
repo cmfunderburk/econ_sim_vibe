@@ -233,12 +233,12 @@ python -m pytest --tb=no -q
 
 **Update test counts from**:
 ```markdown
-191/191 tests passing (100%)
+197/197 tests passing (100%)
 ```
 
 **To**:
 ```markdown
-191/191 tests passing (100%)
+197/197 tests passing (100%)
 ```
 
 ## Step 5: Validate Economic Correctness (30 minutes)
