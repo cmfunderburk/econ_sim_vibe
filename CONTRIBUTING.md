@@ -2,18 +2,20 @@
 
 Welcome to the economic simulation project! This guide will help you get started with development and ensure your contributions align with our research-grade standards.
 
-**Current Status**: Economic Engine complete with 74/74 unit tests passing. **Next Priority**: Validation scenarios V1-V2.
+## 🚨 Current Development Status
 
-## Quick Start
+### Critical Issue: Import System Currently Broken
 
-### Prerequisites
-- Python 3.12.3+
-- Git
-- Virtual environment manager
+**DEVELOPMENT ENVIRONMENT BROKEN**:
+- ❌ **Cannot run any tests**: ModuleNotFoundError prevents pytest execution
+- ❌ **Missing package configuration**: No setup.py for proper installation
+- ❌ **Setup instructions fail**: Fresh environment setup produces non-functional environment
+- ❌ **All test claims unverifiable**: Cannot validate any functionality until imports work
 
-### Setup
+### Setup That Will Fail (Reality Check)
+
 ```bash
-# Clone the repository
+# This setup procedure produces a broken development environment:
 git clone https://github.com/cmfunderburk/econ_sim_vibe.git
 cd econ_sim_vibe
 
@@ -21,14 +23,30 @@ cd econ_sim_vibe
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies
+# Install dependencies (insufficient for proper imports)
 pip install -r requirements.txt
 pip install -r requirements-dev.txt  # For development tools
 
-# Verify everything works
-make test          # Should show: 74 tests passing (100% success rate)
-make validate      # Run economic validation scenarios
+# CRITICAL MISSING STEP (not yet implemented):
+# pip install -e .  # This should work but setup.py doesn't exist
+
+# These commands will fail with import errors:
+make test          # FAILS: ImportError: No module named 'src'
+make validate      # FAILS: Cannot import modules
+pytest tests/     # FAILS: ModuleNotFoundError
 ```
+
+### Required Fixes to Enable Development
+
+**BEFORE any real development can begin**:
+1. **Create Package Configuration**: Add missing setup.py to enable `pip install -e .`
+2. **Fix Import System**: Enable proper development imports of src/ modules
+3. **Test in Fresh Environment**: Verify setup actually works for new contributors
+4. **Update Instructions**: Document working setup procedure
+
+Only after fixing import system can we validate any claimed functionality.
+
+## Development Workflow
 
 ## Development Workflow
 
@@ -103,15 +121,23 @@ econ_sim_vibe/
 ```
 
 ### Current Implementation Status
-- ✅ **Agent Framework**: Production-ready with comprehensive testing
-- ✅ **Economic Engine**: Complete Walrasian equilibrium solver + market clearing
-- ✅ **Testing Suite**: 74 unit tests covering all economic invariants
-- 🔄 **Validation Scenarios**: V1-V2 implementation needed (NEXT PRIORITY)
-- ⚠️ **Simulation Engine**: Configuration loading and runtime implementation needed
+- ❌ **Critical Blocker**: Import system broken - no tests can run until fixed
+- ⚠️ **Agent Framework**: Code exists but cannot verify functionality due to import failures
+- ⚠️ **Economic Engine**: Code exists but cannot verify test claims due to import failures  
+- ❌ **Testing Suite**: Cannot run any tests due to ModuleNotFoundError
+- ❌ **Development Environment**: Non-functional setup prevents contribution
 
 ## Contribution Guidelines
 
-### Code Standards
+### Current Blockers
+
+**BEFORE attempting any development**:
+1. **Fix Import System**: Cannot run any code until `setup.py` created and `pip install -e .` works
+2. **Verify Test Claims**: All "74/74 tests passing" claims unverifiable due to import failures
+3. **Test Fresh Environment**: Setup instructions don't work in clean environments
+4. **Document Working Procedure**: Need verified setup instructions that actually work
+
+### Code Standards (When Environment Works)
 
 1. **Economic Correctness**: All code must preserve economic invariants
    - Walras' Law: p·Z_market(p) ≡ 0
@@ -135,29 +161,23 @@ econ_sim_vibe/
    - Use fixed random seeds: `np.random.seed(seed)` and `random.seed(seed)`
    - Set deterministic environment: `OPENBLAS_NUM_THREADS=1 NUMEXPR_MAX_THREADS=1`
 
-### Economic Testing
+### Economic Testing (Cannot Be Verified - Import System Broken)
 
-#### Current Test Status
-The project has comprehensive test coverage with **74/74 unit tests passing**:
-- **Agent Framework**: 15 unit tests (creation, utilities, inventory management)
-- **Equilibrium Solver**: 28 unit tests (price computation, convergence, edge cases)  
-- **Market Clearing**: 31 unit tests (trade execution, rationing, economic invariants)
+#### Test Status Claims (Unverifiable)
+The project claims comprehensive test coverage but cannot verify:
+- **Import failures**: ModuleNotFoundError prevents any test execution
+- **Missing package config**: No setup.py or pytest.ini for proper test discovery
+- **Broken setup**: Fresh environment setup produces non-functional development environment
 
-#### Required Tests for New PRs
-Every PR must pass:
+#### What Should Work (When Import System Fixed)
 ```bash
-# Full unit test suite (should show 74/74 passing)
-make test
-
-# Economic invariant validation
-pytest tests/unit/test_equilibrium.py -v
-pytest tests/unit/test_market_clearing.py -v
-
-# Core validation scenarios (when implemented)
-pytest tests/validation/test_scenarios.py -k "V1 or V2"
-```
-
-#### Priority Validation Scenarios (Next Implementation Target)
+# These should work after fixing imports:
+# pip install -e .        # Install package in development mode (MISSING: setup.py)
+# make test               # Run full test suite (FAILS: import errors)
+# pytest tests/unit/ -v   # Run unit tests (FAILS: ModuleNotFoundError)
+```  
+- **V6 (Price Normalization)**: p₁ ≡ 1 and convergence criteria
+#### Priority Validation Scenarios (When Import System Works)
 - **V1 (Edgeworth 2×2)**: Analytical verification against known solution
 - **V2 (Spatial Null)**: κ=0 should match Phase-1 exactly  
 - **V6 (Price Normalization)**: p₁ ≡ 1 and convergence criteria
@@ -203,7 +223,7 @@ assert np.linalg.norm(Z_market[1:], ord=np.inf) < SOLVER_TOL
 assert abs(total_buys - total_sells) < FEASIBILITY_TOL
 ```
 
-#### Configuration
+#### Configuration (When Imports Work)
 ```python
 # Always load from YAML
 import yaml
@@ -215,7 +235,7 @@ market_width = config.get('market_width', 2)
 market_height = config.get('market_height', 2)
 ```
 
-## Economic Theory Guidelines
+## Economic Theory Guidelines (When Environment Works)
 
 ### Phase 1: Pure Walrasian
 - Focus on equilibrium computation and analytical verification
@@ -232,7 +252,7 @@ market_height = config.get('market_height', 2)
 - Bilateral bargaining
 - Market microstructure
 
-## Research Standards
+## Research Standards (Cannot Be Applied - Import System Broken)
 
 ### Data Products
 - Log all simulation data to Parquet with schema versioning
@@ -259,33 +279,35 @@ market_height = config.get('market_height', 2)
 - **[README.md](README.md)**: Project overview and contributor quick start
 - **AI Instructions**: Comprehensive AI development assistant configuration
 
-### Key Files to Understand
-- **`src/core/agent.py`**: Economic agents with Cobb-Douglas preferences
-- **`src/econ/equilibrium.py`**: Market-clearing price computation
-- **`src/econ/market.py`**: Trade execution with inventory constraints
-- **`tests/unit/test_components.py`**: Core functionality tests
+### Key Files to Understand (Cannot Be Imported Until Fixed)
+- **`src/core/agent.py`**: Economic agents with Cobb-Douglas preferences (UNVERIFIABLE)
+- **`src/econ/equilibrium.py`**: Market-clearing price computation (UNVERIFIABLE)
+- **`src/econ/market.py`**: Trade execution with inventory constraints (UNVERIFIABLE)
+- **`tests/unit/test_components.py`**: Core functionality tests (CANNOT RUN)
 
 ### Issues and Discussions
-- **Bug reports**: Use GitHub Issues with reproduction steps
-- **Feature requests**: Use GitHub Issues with economic motivation
+- **Bug reports**: Use GitHub Issues - **PRIORITY**: Import system failure
+- **Feature requests**: Must wait until basic development environment works
 - **Questions**: Use GitHub Discussions for research collaboration
 - **AI Assistant**: Project includes comprehensive AI development instructions
 
 ### Code Review Focus
 Our reviews prioritize:
-1. **Economic correctness**: Do the economics work as specified?
-2. **Reproducibility**: Can others reproduce your results?
-3. **Performance**: Does it scale to research targets?
-4. **Clarity**: Is the code self-documenting?
+1. **Import System Fix**: Priority one - nothing else matters until this works
+2. **Environment Verification**: Setup instructions must work in fresh environments
+3. **Test Validation**: Verify claimed test results in independent environments
+4. **Economic correctness**: Do the economics work as specified? (when testable)
+5. **Reproducibility**: Can others reproduce your results? (when possible)
 
-## Release Process
+## Release Process (Cannot Be Applied - Environment Broken)
 
 ### Validation Requirements
 Before any release:
-- All validation scenarios (V1-V10) must pass
-- Performance benchmarks must meet targets
-- Documentation must be up-to-date
-- Cross-platform testing (Linux, macOS, Windows)
+- **CRITICAL**: Fix import system and verify development environment works
+- All validation scenarios (V1-V10) must pass (currently untestable)
+- Performance benchmarks must meet targets (currently unmeasurable)
+- Documentation must be up-to-date (currently contains false claims)
+- Cross-platform testing (Linux, macOS, Windows) (currently impossible)
 
 ### Versioning
 We use semantic versioning:
@@ -295,9 +317,7 @@ We use semantic versioning:
 
 ---
 
-Thank you for contributing to economic simulation research! Your work helps advance our understanding of spatial market mechanisms and agent-based economic modeling.
-We use semantic versioning:
-- **Major**: Breaking changes to economic model or API
+**IMPORTANT**: Before any meaningful development can occur, the import system must be fixed and setup instructions must work in fresh environments. Thank you for your patience as we address these fundamental development environment issues! 🚨
 - **Minor**: New features, additional validation scenarios
 - **Patch**: Bug fixes, performance improvements
 

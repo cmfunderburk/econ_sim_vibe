@@ -3,187 +3,49 @@
 ## Project Overview
 This is a research-grade economic simulation implementing agent-based modeling with spatial frictions in market economies. The simulation models rational agents trading goods on a configurable spatial grid with centralized marketplace access and movement costs.
 
-*This p### AI Assistant Guidelines 🤖
-
-### Human Contributor Guidance
-When users request a **"human summary"** or ask for **"contributor guidance"**:
-1. **Read the current Human Summary**: Always check `copilot_summaries/Human Summary` first
-2. **Update for current state**: Modify the Human Summary to reflect the current project status
-3. **Provide orientation**: Focus on immediate next steps and contribution opportunities
-4. **Include technical context**: Ensure contributors understand the economic foundation and architecture
-5. **Actionable guidance**: Provide specific commands, file locations, and success metrics
-
-### When Working on This Project
-1. **Always prioritize economic correctness** over coding convenience
-2. **Validate invariants** in every function that modifies economic state
-3. **Use proper mathematical notation** from SPECIFICATION.md (Z_market, not Z)
-4. **Test against known analytical solutions** (Edgeworth box, simple cases)
-5. **Follow .gitignore rules** - exclude venv/, __pycache__/, *.pyc, etc.
-6. **Focus on Phase 1 implementation** - spatial features come later forked from econ_sim_base with enhanced "vibe" features and customizations.*
-
 **📋 Key References**: 
 - [SPECIFICATION.md](../SPECIFICATION.md) for complete technical specification (825+ lines)
 - [CONTRIBUTING.md](../CONTRIBUTING.md) for development standards and workflows
 - [README.md](../README.md) for project overview and quick-start guide
 
-## Current Project Status ✅ COMPLETE VALIDATION FRAMEWORK ACHIEVED - PRODUCTION-READY RESEARCH PLATFORM
-- ✅ **Specification Phase Complete**: Bulletproof technical design with configurable marketplace
-- ✅ **Developer Tooling Complete**: Comprehensive development environment and standards
-- ✅ **Project Scaffolding Complete**: All module stubs, configs, and test structure ready
-- ✅ **Agent Framework Complete**: Production-ready Agent class with comprehensive testing (Sep 20, 2025)
-- ✅ **Economic Engine Complete**: Walrasian equilibrium solver + market clearing mechanisms (Sep 20, 2025)
-- ✅ **Complete Validation Framework ACHIEVED**: 84/84 tests passing, all V1-V10 scenarios validated (Sep 20, 2025)
-- ✅ **Production-Ready Research Platform**: Comprehensive validation suitable for publication-quality experiments
-- 📋 **Next Priority**: Configuration integration and Phase 2 spatial implementation
-- 🎯 **Implementation Goal**: Complete Phase 2 spatial extensions with grid movement and marketplace access
+## 🚨 CRITICAL PROJECT STATUS: Development Environment Broken
 
-### What Exists vs What's Needed
-**✅ Complete & Ready:**
-- Module structure (`src/core/`, `src/econ/`, `src/spatial/`) with detailed docstrings
-- Configuration files for 10 validation scenarios (V1-V10) in `config/`
-- Testing framework with comprehensive test suite in `tests/unit/` and `tests/validation/`
-- Economic theory specification and mathematical foundations in SPECIFICATION.md
-- Development tooling (Makefile, linting, formatting, CI setup)
-- **AGENT FRAMEWORK COMPLETE**: `src/core/agent.py` with Cobb-Douglas utilities, inventory management, spatial positioning
-- **ECONOMIC ENGINE COMPLETE**: `src/econ/equilibrium.py` (Walrasian solver) + `src/econ/market.py` (market clearing)
-- **COMPLETE VALIDATION FRAMEWORK**: 84 tests (74 unit tests + 10 validation scenarios), all V1-V10 scenarios passing
-- **INTEGRATION PIPELINE**: Complete Agent → Equilibrium → Market Clearing validated with perfect economic invariants
-- **PRODUCTION READINESS**: All modules tested, imports working, performance validated, edge cases handled
-- Implementation summaries tracking in `copilot_summaries/Implementation Summaries`
+### Reality Check for AI Assistants
+- ❌ **Import System Failure**: ModuleNotFoundError prevents any test execution
+- ❌ **Missing Package Configuration**: No setup.py for proper package installation
+- ❌ **Setup Instructions Don't Work**: Fresh environment setup produces non-functional development
+- ❌ **All Functionality Claims Unverifiable**: Cannot validate any previous achievements due to import failures
 
-**🔄 Implementation Needed:**
-- Configuration loading and simulation engine (`scripts/run_simulation.py`)
-- Grid and movement implementation (`src/spatial/`)
-- Phase 2 spatial features (marketplace access, movement costs, spatial efficiency analysis)
+### Previous Claims Cannot Be Verified
+The following claims exist in documentation but cannot be verified:
+- "Complete Validation Framework ACHIEVED" - UNTESTABLE due to import failures
+- "84/84 tests passing" - UNTESTABLE due to ModuleNotFoundError
+- "Production-Ready Research Platform" - UNTESTABLE due to non-functional setup
+- "All V1-V10 scenarios validated" - UNTESTABLE due to pytest execution failures
 
-## Phase 1 Implementation Priorities 🎯
+### What Code Actually Exists (Unverified)
+**Code files present but cannot execute**:
+- `src/core/agent.py` - Agent class implementation (appears complete, unverifiable)
+- `src/econ/equilibrium.py` - Economic solver code (appears complete, unverifiable)
+- `src/econ/market.py` - Market clearing mechanisms (appears complete, unverifiable)
+- `tests/unit/test_components.py` - Unit test definitions (cannot run due to imports)
+- `tests/validation/test_scenarios.py` - Validation scenarios (cannot run due to imports)
 
-### Immediate Implementation Tasks
-1. **✅ Agent Framework COMPLETE** (`src/core/agent.py`)
-   - ✅ Agent class with Cobb-Douglas utility functions
-   - ✅ Home and personal inventory management
-   - ✅ Position tracking and market access detection
-   - ✅ Comprehensive testing suite (15 unit tests, edge cases, integration, performance)
-   - ✅ All economic invariants validated (conservation, budget constraints, Walras' Law)
-   - ✅ Performance targets met (3.12μs per demand calculation, 8.71KB per agent)
-
-2. **✅ Economic Engine COMPLETE** (`src/econ/equilibrium.py`)
-   - ✅ Walrasian equilibrium solver with numéraire normalization (p₁ ≡ 1)
-   - ✅ Closed-form Cobb-Douglas demand functions
-   - ✅ Excess demand computation for marketplace participants
-   - ✅ Market clearing mechanisms (`src/econ/market.py`)
-   - ✅ Constrained execution with proportional rationing
-   - ✅ Economic invariant validation (Walras' Law, conservation)
-   - ✅ 59 unit tests (28 equilibrium + 31 market clearing), all economic invariants
-   - ✅ Performance targets met (3.12μs per demand calculation, 8.71KB per agent)
-
-3. **✅ Complete Validation Framework ACHIEVED** (`tests/validation/test_scenarios.py`)
-   - ✅ All V1-V10 scenarios implemented and passing
-   - ✅ V1: Edgeworth box 2×2 analytical verification
-   - ✅ V2: Spatial null test (κ=0 should equal Phase 1)
-   - ✅ V3-V10: Comprehensive economic validation covering edge cases, numerical stability
-   - ✅ 84/84 tests passing with complete economic invariant checking framework
-
-4. **✅ Integration Testing and Phase 1 Completion ACHIEVED**
-   - ✅ Complete Phase 1 pipeline: agent creation → equilibrium solving → market clearing
-   - ✅ All economic invariants validated end-to-end
-   - ✅ Performance testing with 100+ agents completed
-   - ✅ Production-ready research platform achieved
-
-### Mathematical Foundations (Implementation Ready)
-
-#### Cobb-Douglas Implementation Pattern
-```python
-class CobbDouglasAgent:
-    """Agent with Cobb-Douglas utility: U(x) = ∏_j x_j^α_j where ∑_j α_j = 1"""
-    
-    def __init__(self, alpha: np.ndarray, endowment: np.ndarray):
-        self.alpha = alpha / np.sum(alpha)  # Ensure normalization
-        self.total_endowment = endowment.copy()
-        
-    def demand(self, prices: np.ndarray) -> np.ndarray:
-        """Optimal demand: x_j = α_j * wealth / p_j"""
-        wealth = np.dot(prices, self.total_endowment)
-        return self.alpha * wealth / prices
-        
-    def utility(self, consumption: np.ndarray) -> float:
-        """Cobb-Douglas utility with safety guards"""
-        consumption = np.maximum(consumption, 1e-10)  # Avoid log(0)
-        return np.prod(consumption ** self.alpha)
-```
-
-#### Equilibrium Solver Pattern
-```python
-def solve_walrasian_equilibrium(agents: List[Agent]) -> Tuple[np.ndarray, float]:
-    """Solve for market-clearing prices with numéraire normalization"""
-    n_goods = agents[0].alpha.size
-    
-    def excess_demand_rest_goods(p_rest: np.ndarray) -> np.ndarray:
-        """Excess demand for goods 2,...,n (good 1 is numéraire)"""
-        prices = np.concatenate([[1.0], p_rest])  # p₁ ≡ 1
-        total_demand = np.zeros(n_goods)
-        total_endowment = np.zeros(n_goods)
-        
-        for agent in agents:
-            demand = agent.demand(prices)
-            total_demand += demand
-            total_endowment += agent.total_endowment
-            
-        excess_demand = total_demand - total_endowment
-        return excess_demand[1:]  # Return only rest goods (exclude numéraire)
-    
-    # Solve using scipy
-    p_rest_initial = np.ones(n_goods - 1)  # Initial guess
-    p_rest_solution = scipy.optimize.fsolve(excess_demand_rest_goods, p_rest_initial)
-    prices = np.concatenate([[1.0], p_rest_solution])
-    
-    # Compute convergence metric
-    z_rest_norm = np.linalg.norm(excess_demand_rest_goods(p_rest_solution), ord=np.inf)
-    
-    return prices, z_rest_norm
-```
-
-## Critical Economic Invariants 🚨
-
-All implementations MUST preserve these invariants (failing these breaks the simulation):
-
-```python
-# 1. Conservation Law: Goods cannot be created or destroyed
-def test_conservation(agents_before: List[Agent], agents_after: List[Agent]):
-    total_before = sum(agent.total_endowment for agent in agents_before)
-    total_after = sum(agent.total_endowment for agent in agents_after)
-    assert np.allclose(total_before, total_after, atol=1e-10)
-
-# 2. Walras' Law: Price vector dot excess demand must equal zero
-def test_walras_law(prices: np.ndarray, excess_demand: np.ndarray):
-    walras_dot = np.dot(prices, excess_demand)
-    assert abs(walras_dot) < 1e-8, f"Walras' Law violated: {walras_dot}"
-
-# 3. Numéraire Constraint: Good 1 price always equals 1
-def test_numeraire(prices: np.ndarray):
-    assert abs(prices[0] - 1.0) < 1e-12, f"Numéraire violated: p[0]={prices[0]}"
-
-# 4. Market Clearing: Primary convergence test
-def test_market_clearing(excess_demand: np.ndarray):
-    z_rest_norm = np.linalg.norm(excess_demand[1:], ord=np.inf)
-    assert z_rest_norm < 1e-8, f"Poor convergence: ||Z_rest||_∞ = {z_rest_norm}"
-
-# 5. Non-negativity: All consumption bundles must be non-negative
-def test_nonnegativity(consumption: np.ndarray):
-    assert np.all(consumption >= -1e-10), f"Negative consumption: {consumption}"
-```
-
-## Implementation Patterns & Standards
+**🔄 Critical Implementation Needed:**
+- Package configuration (`setup.py`, `pytest.ini`) to enable imports
+- Verified setup instructions that work in fresh environments
+- Reality-based documentation that reflects actual functionality
+## Implementation Patterns & Standards (When Environment Works)
 
 ### File Organization
 ```
 src/
 ├── core/
-│   ├── agent.py          # ✅ COMPLETE: Agent class with Cobb-Douglas utilities
+│   ├── agent.py          # Agent class with Cobb-Douglas utilities
 │   ├── simulation.py     # SimulationEngine and round management
 │   └── types.py          # Trade, SimulationState, core dataclasses
 ├── econ/
-│   ├── equilibrium.py    # 🔄 NEXT: Walrasian solver with analytical forms
+│   ├── equilibrium.py    # Walrasian solver with analytical forms
 │   ├── market.py         # Market clearing and trade execution
 │   └── welfare.py        # Utility measurement and welfare analysis
 ├── spatial/              # Phase 2: spatial extensions (deferred)
@@ -193,34 +55,24 @@ src/
     └── loader.py        # YAML configuration loading
 ```
 
-### Development Workflow & Commands (Essential for Implementation)
+### Development Workflow & Commands (Cannot Use Until Import System Fixed)
 
 ```bash
-# Primary development commands (use these!)
-make install-dev       # Setup virtual environment with all dependencies
-make test             # Run full test suite with economic invariants
-make format           # Auto-format code (black, ruff) - run before commits
-make run CONFIG=config/edgeworth.yaml SEED=42  # Test simulation
+# These commands will fail until setup.py created:
+make install-dev       # FAILS: No package configuration
+make test             # FAILS: ImportError: No module named 'src'
+make format           # FAILS: Cannot import for checking
+make run CONFIG=config/edgeworth.yaml SEED=42  # FAILS: Import errors
 
-# Implementation workflow
-pytest tests/unit/ -v          # Test individual components
-pytest tests/validation/ -v    # Economic validation scenarios V1-V10
-
-# Critical: All commands set deterministic environment
-# OPENBLAS_NUM_THREADS=1 NUMEXPR_MAX_THREADS=1 (prevents solver jitter)
+# These should work after fixing imports:
+# pytest tests/unit/ -v          # Test individual components
+# pytest tests/validation/ -v    # Economic validation scenarios V1-V10
 ```
 
 ### Key Configuration Constants (From SPECIFICATION.md)
 ```python
 # Numerical tolerances - USE THESE EXACT VALUES
 SOLVER_TOL = 1e-8        # Primary convergence: ||Z_rest||_∞ < SOLVER_TOL  
-FEASIBILITY_TOL = 1e-10  # Conservation and feasibility checks
-RATIONING_EPS = 1e-10    # Prevent division by zero in rationing
-
-# Economic parameters
-NUMERAIRE_GOOD = 0       # Good 1 is numéraire (p[0] ≡ 1.0)
-MIN_ALPHA = 0.05         # Minimum preference weight (ensures interior solutions)
-```
 FEASIBILITY_TOL = 1e-10  # Conservation and feasibility checks
 RATIONING_EPS = 1e-10    # Prevent division by zero in rationing
 
@@ -386,137 +238,93 @@ flake8>=6.0.0          # Linting
 - **Development tools**: Complete (Makefile, requirements, formatting, etc.)
 - **Recent completion**: Complete Validation Framework with comprehensive testing validation (Sep 20, 2025)
 
-### Implementation Summary Protocol
-When completing major implementation tasks, append summaries to `copilot_summaries/Implementation Summaries` using this format:
+### Summary Documentation (Optional)
+When completing significant work, you may optionally add a summary to `copilot_summaries/` for future reference:
 
 ```
-================================================================================
-DATE: [Current Date]
-TITLE: [Brief Descriptive Title]
-================================================================================
-[Detailed summary content including:
-- What was implemented
-- Testing results
-- Performance metrics
-- Files created/modified
-- Next steps]
-================================================================================
+Date: [Current Date]
+Title: [Brief Description]
+
+- What was changed
+- Files affected  
+- Current status
+- Next steps
 ```
 
-### Other Tweaks Documentation Protocol
-When making incremental improvements, documentation updates, process changes, or other modifications that don't constitute major implementation milestones, append summaries to `copilot_summaries/other tweaks` using the same format. This includes:
+### Current Implementation Context
+- **Working code base**: Code files exist but cannot verify functionality due to broken import system
+- **Critical blocker**: Missing setup.py prevents any development or testing
+- **Development environment**: Non-functional - setup instructions don't work in fresh environments
+- **Priority**: Fix import system before any other development
 
-- Documentation consistency updates
-- Process improvements and workflow changes
-- AI instruction modifications
-- Configuration adjustments
-- Bug fixes and minor enhancements
-- Development tooling updates
+### AI Assistant Guidelines 🤖
 
-### Summary File Guidelines
-- **Implementation Summaries**: Major development milestones (Agent framework, equilibrium solver, market clearing, etc.)
-- **Other Tweaks**: Incremental improvements, documentation updates, process changes, minor fixes
-- Both files use the same structured format for consistency
-- Always include quantified achievements and context for future AI agents
-- Reference relevant files modified and impact on project progression
-
-This dual-track documentation system creates a comprehensive historical record of both major implementation progress and incremental improvements for future reference and project continuity.
+### When Working on This Project
+1. **Priority**: Fix development environment before economic features
+2. **Reality check**: Verify setup works in fresh environments before claiming success
+3. **Honest assessment**: Don't claim functionality that cannot be tested due to import failures
+4. **Focus**: Package configuration and basic development setup over advanced features
 
 ### Common Requests & Responses
-- **"Add configuration integration"** → Use completed validation framework for end-to-end simulation implementation
-- **"Fix economic bug"** → Always validate against economic theory in SPECIFICATION.md and check test suite
-- **"Add spatial features"** → Begin Phase 2 implementation building on complete validation framework  
-- **"Add new utility function"** → Ensure plugin architecture compatibility with existing equilibrium solver
-- **"Optimize performance"** → Vectorize with numpy, build on existing performance validation
-- **"Test the implementation"** → Run comprehensive test suite (84/84 tests) and validation scenarios
+- **"Add configuration integration"** → First fix import system, then verify if economic code actually works
+- **"Fix economic bug"** → Cannot debug without functional development environment
+- **"Add spatial features"** → Must create working development environment first
+- **"Test the implementation"** → Cannot run any tests until import system fixed
+- **"Optimize performance"** → Cannot measure performance until tests can run
 
-This project represents cutting-edge research in computational economics. Every line of code should reflect the highest standards of both software engineering and economic theory.
+This project requires basic development environment functionality before any economic simulation work can proceed.
 - **Research integration**: Design for testing economic hypotheses and policy experiments
 
-## Git Workflow & Commit Protocol 🔄
+## Git Workflow & Commit Protocol (Simplified) 🔄
 
 ### Automatic Commit/Push Behavior
-When the user requests to "commit" or "push" changes, automatically execute git operations with descriptive messages designed for future AI agent comprehension. Do not ask for confirmation - proceed directly with staging, committing, and pushing.
+When the user requests to "commit" or "push" changes, automatically execute git operations with descriptive messages. Do not ask for confirmation - proceed directly with staging, committing, and pushing.
 
-### Commit Message Template
-Use this structured format for all commits:
+### Simple Commit Message Format
+Use this concise format for commits:
 
 ```
 [type]: [Brief summary of changes]
 
-[MILESTONE/PHASE MARKER if applicable]
-- [Key achievement or implementation completed]
-- [Quantified metrics or validation results where relevant]
-- [Testing coverage or performance improvements]
+- [What was done]
+- [Key files changed]
+- [Testing status or known issues]
 
-[IMPLEMENTATION DETAILS]:
-- [Specific files/modules changed and their purpose]
-- [Technical achievements or economic theory implemented]
-- [Bug fixes or edge cases handled]
-
-[PROJECT PROGRESSION]:
-- [How this change advances the overall project goals]
-- [What phase/milestone this represents]
-- [Dependencies resolved or new capabilities unlocked]
-
-[NEXT PRIORITIES if significant milestone]:
-- [Clear guidance for continuation]
-- [Target validation scenarios or implementation goals]
-- [Technical debt or known issues to address]
-
-[CONTEXT FOR AI AGENTS]:
-- [Why these changes matter for economic simulation]
-- [How this fits into the broader research framework]
-- [Links to relevant documentation or specifications]
+[Next steps if applicable]
 ```
 
 ### Commit Types
-- `feat:` New feature implementation (major modules, algorithms)
-- `docs:` Documentation updates, README changes, specification updates
-- `test:` Testing additions, validation scenarios, performance benchmarks
-- `fix:` Bug fixes, edge case handling, numerical stability
-- `refactor:` Code reorganization, performance optimization
-- `config:` Configuration files, validation scenarios, build setup
-- `milestone:` Major project milestones (Agent framework, equilibrium solver, etc.)
+- `feat:` New feature implementation
+- `docs:` Documentation updates
+- `test:` Testing additions
+- `fix:` Bug fixes
+- `config:` Configuration changes
+- `env:` Development environment fixes
 
-### Message Guidelines for AI Understanding
-1. **Quantify achievements**: Include metrics, test counts, performance numbers
-2. **Reference economic theory**: Mention Walras' Law, equilibrium, conservation when relevant
-3. **Mark progression**: Clearly indicate project phase transitions
-4. **Provide continuity**: Help future AI agents understand what comes next
-5. **Economic context**: Explain why changes matter for the simulation research
-6. **Validation status**: Reference which scenarios (V1-V10) are affected or completed
+### Quick Commit Guidelines
+1. **Be specific**: What actually changed?
+2. **Note blockers**: Any import failures or setup issues?
+3. **Test status**: Can tests run? Do they pass?
+4. **Next steps**: What should be done next?
 
-### Example Quality Commit Messages
+### Example Simplified Commit Messages
 ```
-milestone: Complete Agent framework with comprehensive economic validation
+fix: Replace false test claims with honest import failure status
 
-MILESTONE: Agent Framework Production-Ready ✅
-- Agent class with Cobb-Douglas utilities and spatial positioning implemented
-- 15 unit tests covering economic invariants, edge cases, integration, performance
-- Achieved 3.12μs per demand calculation, 8.71KB memory per agent
-- All economic invariants validated: conservation, budget constraints, Walras' Law
+- Updated README.md, CONTRIBUTING.md to reflect broken import system
+- Removed unverifiable "84/84 tests passing" claims
+- Added setup.py requirement and development environment blockers
 
-IMPLEMENTATION DETAILS:
-- src/core/agent.py: Production-ready Agent class with comprehensive docstrings
-- Enhanced testing suite covering specification compliance and numerical stability
-- Performance optimization with vectorized numpy operations
-- Edge case handling for zero wealth, boundary conditions, numerical precision
+Next: Create setup.py to fix imports, then verify actual test results
+```
+### Special Cases
+- **Breaking changes**: Mark clearly with BREAKING: prefix and migration guidance
+- **Validation completion**: Reference specific scenarios (V1-V10) and economic metrics
+- **Performance improvements**: Include before/after benchmarks
+- **Bug fixes**: Explain economic implications and edge cases resolved
+- **Documentation updates**: Note which sections help future AI agent comprehension
 
-PROJECT PROGRESSION:
-- Transitioned from scaffolding phase to active implementation
-- First major economic component fully validated and ready for integration
-- Established foundation for equilibrium solver and market clearing mechanisms
-- Documentation updated to reflect completed milestone
-
-NEXT PRIORITIES:
-- Economic Engine: Walrasian equilibrium solver with numéraire normalization
-- Target validation scenarios V1 (Edgeworth 2×2) and V2 (spatial null test)
-- Market clearing mechanisms with constrained execution
-
-CONTEXT FOR AI AGENTS:
-- Agent framework enables pure exchange economy modeling with spatial constraints
-- Provides foundation for studying spatial deadweight loss in market economies
+This protocol ensures every commit provides maximum context for project continuity and AI agent understanding of the economic simulation research progression.
 - Ready for Phase 1 implementation: equilibrium computation and analytical verification
 ```
 
