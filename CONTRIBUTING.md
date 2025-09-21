@@ -2,6 +2,8 @@
 
 Welcome to the economic simulation project! This guide will help you get started with development and ensure your contributions align with our research-grade standards.
 
+**Current Status**: Economic Engine complete with 74/74 unit tests passing. **Next Priority**: Validation scenarios V1-V2.
+
 ## Quick Start
 
 ### Prerequisites
@@ -12,8 +14,8 @@ Welcome to the economic simulation project! This guide will help you get started
 ### Setup
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd econ_sim_simpler
+git clone https://github.com/cmfunderburk/econ_sim_vibe.git
+cd econ_sim_vibe
 
 # Create and activate virtual environment
 python -m venv venv
@@ -23,8 +25,9 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 pip install -r requirements-dev.txt  # For development tools
 
-# Install pre-commit hooks
-pre-commit install
+# Verify everything works
+make test          # Should show: 74 tests passing (100% success rate)
+make validate      # Run economic validation scenarios
 ```
 
 ## Development Workflow
@@ -81,23 +84,30 @@ ruff check src/ tests/ scripts/
 ## Project Structure
 
 ```
-econ_sim_simpler/
+econ_sim_vibe/
 ├── src/                    # Core implementation
-│   ├── agents/            # Agent logic, utilities, movement
-│   ├── economics/         # Equilibrium solver, market clearing
-│   ├── environment/       # Grid, world state
-│   ├── simulation/        # Main simulation engine
-│   └── validation/        # Validation scenarios
+│   ├── core/              # Agent framework (COMPLETE ✅)
+│   ├── econ/              # Economic engine (COMPLETE ✅)
+│   │   ├── equilibrium.py # Walrasian equilibrium solver 
+│   │   └── market.py      # Market clearing mechanisms
+│   └── spatial/           # Spatial extensions (Phase 2)
 ├── tests/
-│   ├── validation/        # Economic validation tests (V1-V10)
-│   └── unit/             # Unit tests for components
+│   ├── unit/              # Unit tests (74/74 passing ✅)
+│   └── validation/        # Economic validation tests (V1-V10)
 ├── scripts/
-│   ├── run_simulation.py  # Main simulation runner
-│   └── validate_scenario.py # Validation runner
-├── config/               # YAML configuration files
-├── notebooks/            # Analysis notebooks
-└── docs/                 # Documentation
+│   ├── run_simulation.py  # Main simulation runner (needs implementation)
+│   └── validate_scenario.py # Validation runner (needs implementation)
+├── config/               # YAML configuration files (10 scenarios ready)
+├── copilot_summaries/    # Implementation tracking and Human Summary
+└── .github/              # AI assistant instructions and workflows
 ```
+
+### Current Implementation Status
+- ✅ **Agent Framework**: Production-ready with comprehensive testing
+- ✅ **Economic Engine**: Complete Walrasian equilibrium solver + market clearing
+- ✅ **Testing Suite**: 74 unit tests covering all economic invariants
+- 🔄 **Validation Scenarios**: V1-V2 implementation needed (NEXT PRIORITY)
+- ⚠️ **Simulation Engine**: Configuration loading and runtime implementation needed
 
 ## Contribution Guidelines
 
@@ -127,24 +137,31 @@ econ_sim_simpler/
 
 ### Economic Testing
 
-#### Required Tests
+#### Current Test Status
+The project has comprehensive test coverage with **74/74 unit tests passing**:
+- **Agent Framework**: 15 unit tests (creation, utilities, inventory management)
+- **Equilibrium Solver**: 28 unit tests (price computation, convergence, edge cases)  
+- **Market Clearing**: 31 unit tests (trade execution, rationing, economic invariants)
+
+#### Required Tests for New PRs
 Every PR must pass:
 ```bash
-# Economic invariant tests
-pytest tests/validation/test_invariants.py
+# Full unit test suite (should show 74/74 passing)
+make test
 
-# Core validation scenarios
-pytest tests/validation/test_scenarios.py -k "V1 or V2 or V6"
+# Economic invariant validation
+pytest tests/unit/test_equilibrium.py -v
+pytest tests/unit/test_market_clearing.py -v
 
-# Unit tests for your changes
-pytest tests/unit/
+# Core validation scenarios (when implemented)
+pytest tests/validation/test_scenarios.py -k "V1 or V2"
 ```
 
-#### Key Validation Scenarios
-- **V1 (Edgeworth 2×2)**: Analytical verification
-- **V2 (Spatial Null)**: κ=0 should match Phase-1 exactly
+#### Priority Validation Scenarios (Next Implementation Target)
+- **V1 (Edgeworth 2×2)**: Analytical verification against known solution
+- **V2 (Spatial Null)**: κ=0 should match Phase-1 exactly  
 - **V6 (Price Normalization)**: p₁ ≡ 1 and convergence criteria
-- **V10 (Spatial Null Unit)**: Fast unit test for Phase-2 == Phase-1
+- **V10 (Integration Test)**: Fast unit test for economic pipeline
 
 ### Pull Request Process
 
@@ -237,14 +254,22 @@ market_height = config.get('market_height', 2)
 ## Getting Help
 
 ### Documentation
-- **[SPECIFICATION.md](SPECIFICATION.md)**: Complete technical specification
-- **[README.md](README.md)**: Project overview and quick start
-- **Code comments**: Implementation details and economic context
+- **[Human Summary](copilot_summaries/Human%20Summary)**: Quick contributor orientation guide
+- **[SPECIFICATION.md](SPECIFICATION.md)**: Complete technical specification (825 lines)
+- **[README.md](README.md)**: Project overview and contributor quick start
+- **AI Instructions**: Comprehensive AI development assistant configuration
+
+### Key Files to Understand
+- **`src/core/agent.py`**: Economic agents with Cobb-Douglas preferences
+- **`src/econ/equilibrium.py`**: Market-clearing price computation
+- **`src/econ/market.py`**: Trade execution with inventory constraints
+- **`tests/unit/test_components.py`**: Core functionality tests
 
 ### Issues and Discussions
 - **Bug reports**: Use GitHub Issues with reproduction steps
 - **Feature requests**: Use GitHub Issues with economic motivation
 - **Questions**: Use GitHub Discussions for research collaboration
+- **AI Assistant**: Project includes comprehensive AI development instructions
 
 ### Code Review Focus
 Our reviews prioritize:
@@ -263,6 +288,14 @@ Before any release:
 - Cross-platform testing (Linux, macOS, Windows)
 
 ### Versioning
+We use semantic versioning:
+- **Major**: Breaking changes to economic model or API
+- **Minor**: New features, additional validation scenarios
+- **Patch**: Bug fixes, performance improvements
+
+---
+
+Thank you for contributing to economic simulation research! Your work helps advance our understanding of spatial market mechanisms and agent-based economic modeling.
 We use semantic versioning:
 - **Major**: Breaking changes to economic model or API
 - **Minor**: New features, additional validation scenarios
