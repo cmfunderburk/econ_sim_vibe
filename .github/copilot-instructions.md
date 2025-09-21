@@ -376,7 +376,24 @@ TITLE: [Brief Descriptive Title]
 ================================================================================
 ```
 
-This creates a historical record of implementation progress and achievements for future reference and project continuity.
+### Other Tweaks Documentation Protocol
+When making incremental improvements, documentation updates, process changes, or other modifications that don't constitute major implementation milestones, append summaries to `copilot_summaries/other tweaks` using the same format. This includes:
+
+- Documentation consistency updates
+- Process improvements and workflow changes
+- AI instruction modifications
+- Configuration adjustments
+- Bug fixes and minor enhancements
+- Development tooling updates
+
+### Summary File Guidelines
+- **Implementation Summaries**: Major development milestones (Agent framework, equilibrium solver, market clearing, etc.)
+- **Other Tweaks**: Incremental improvements, documentation updates, process changes, minor fixes
+- Both files use the same structured format for consistency
+- Always include quantified achievements and context for future AI agents
+- Reference relevant files modified and impact on project progression
+
+This dual-track documentation system creates a comprehensive historical record of both major implementation progress and incremental improvements for future reference and project continuity.
 
 ### Common Requests & Responses
 - **"Implement equilibrium solver"** → Focus on Cobb-Douglas with numéraire normalization
