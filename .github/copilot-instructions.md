@@ -387,3 +387,99 @@ This creates a historical record of implementation progress and achievements for
 
 This project represents cutting-edge research in computational economics. Every line of code should reflect the highest standards of both software engineering and economic theory.
 - **Research integration**: Design for testing economic hypotheses and policy experiments
+
+## Git Workflow & Commit Protocol 🔄
+
+### Automatic Commit/Push Behavior
+When the user requests to "commit" or "push" changes, automatically execute git operations with descriptive messages designed for future AI agent comprehension. Do not ask for confirmation - proceed directly with staging, committing, and pushing.
+
+### Commit Message Template
+Use this structured format for all commits:
+
+```
+[type]: [Brief summary of changes]
+
+[MILESTONE/PHASE MARKER if applicable]
+- [Key achievement or implementation completed]
+- [Quantified metrics or validation results where relevant]
+- [Testing coverage or performance improvements]
+
+[IMPLEMENTATION DETAILS]:
+- [Specific files/modules changed and their purpose]
+- [Technical achievements or economic theory implemented]
+- [Bug fixes or edge cases handled]
+
+[PROJECT PROGRESSION]:
+- [How this change advances the overall project goals]
+- [What phase/milestone this represents]
+- [Dependencies resolved or new capabilities unlocked]
+
+[NEXT PRIORITIES if significant milestone]:
+- [Clear guidance for continuation]
+- [Target validation scenarios or implementation goals]
+- [Technical debt or known issues to address]
+
+[CONTEXT FOR AI AGENTS]:
+- [Why these changes matter for economic simulation]
+- [How this fits into the broader research framework]
+- [Links to relevant documentation or specifications]
+```
+
+### Commit Types
+- `feat:` New feature implementation (major modules, algorithms)
+- `docs:` Documentation updates, README changes, specification updates
+- `test:` Testing additions, validation scenarios, performance benchmarks
+- `fix:` Bug fixes, edge case handling, numerical stability
+- `refactor:` Code reorganization, performance optimization
+- `config:` Configuration files, validation scenarios, build setup
+- `milestone:` Major project milestones (Agent framework, equilibrium solver, etc.)
+
+### Message Guidelines for AI Understanding
+1. **Quantify achievements**: Include metrics, test counts, performance numbers
+2. **Reference economic theory**: Mention Walras' Law, equilibrium, conservation when relevant
+3. **Mark progression**: Clearly indicate project phase transitions
+4. **Provide continuity**: Help future AI agents understand what comes next
+5. **Economic context**: Explain why changes matter for the simulation research
+6. **Validation status**: Reference which scenarios (V1-V10) are affected or completed
+
+### Example Quality Commit Messages
+```
+milestone: Complete Agent framework with comprehensive economic validation
+
+MILESTONE: Agent Framework Production-Ready ✅
+- Agent class with Cobb-Douglas utilities and spatial positioning implemented
+- 15 unit tests covering economic invariants, edge cases, integration, performance
+- Achieved 3.12μs per demand calculation, 8.71KB memory per agent
+- All economic invariants validated: conservation, budget constraints, Walras' Law
+
+IMPLEMENTATION DETAILS:
+- src/core/agent.py: Production-ready Agent class with comprehensive docstrings
+- Enhanced testing suite covering specification compliance and numerical stability
+- Performance optimization with vectorized numpy operations
+- Edge case handling for zero wealth, boundary conditions, numerical precision
+
+PROJECT PROGRESSION:
+- Transitioned from scaffolding phase to active implementation
+- First major economic component fully validated and ready for integration
+- Established foundation for equilibrium solver and market clearing mechanisms
+- Documentation updated to reflect completed milestone
+
+NEXT PRIORITIES:
+- Economic Engine: Walrasian equilibrium solver with numéraire normalization
+- Target validation scenarios V1 (Edgeworth 2×2) and V2 (spatial null test)
+- Market clearing mechanisms with constrained execution
+
+CONTEXT FOR AI AGENTS:
+- Agent framework enables pure exchange economy modeling with spatial constraints
+- Provides foundation for studying spatial deadweight loss in market economies
+- Ready for Phase 1 implementation: equilibrium computation and analytical verification
+```
+
+### Special Cases
+- **Breaking changes**: Mark clearly with BREAKING: prefix and migration guidance
+- **Validation completion**: Reference specific scenarios (V1-V10) and economic metrics
+- **Performance improvements**: Include before/after benchmarks
+- **Bug fixes**: Explain economic implications and edge cases resolved
+- **Documentation updates**: Note which sections help future AI agent comprehension
+
+This protocol ensures every commit provides maximum context for project continuity and AI agent understanding of the economic simulation research progression.
