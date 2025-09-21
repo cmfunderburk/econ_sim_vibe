@@ -7,8 +7,20 @@ of full simulation scenarios.
 
 import pytest
 import numpy as np
-from tests import SOLVER_TOL, FEASIBILITY_TOL
-from src.core import Agent, Trade, SimulationState
+import sys
+from pathlib import Path
+
+# Add src to path for imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
+
+# Import constants and modules
+try:
+    from constants import SOLVER_TOL, FEASIBILITY_TOL
+except ImportError:
+    from src.constants import SOLVER_TOL, FEASIBILITY_TOL
+
+from core.agent import Agent
+from core.types import Trade, SimulationState
 
 
 class TestAgent:

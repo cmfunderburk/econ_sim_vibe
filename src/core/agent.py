@@ -9,10 +9,12 @@ import numpy as np
 from typing import Tuple, Optional
 from dataclasses import dataclass
 
-
-# Constants from SPECIFICATION.md
-FEASIBILITY_TOL = 1e-10  # Conservation and feasibility checks
-MIN_ALPHA = 0.05  # Minimum preference weight (ensures interior solutions)
+# Import constants from centralized source
+try:
+    from constants import FEASIBILITY_TOL, MIN_ALPHA
+except ImportError:
+    # Fallback for different execution contexts
+    from src.constants import FEASIBILITY_TOL, MIN_ALPHA
 
 
 class Agent:

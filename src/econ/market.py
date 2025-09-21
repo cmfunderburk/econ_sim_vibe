@@ -43,9 +43,12 @@ except ImportError:
 # Import agent after types to avoid circular imports
 # from ..core.agent import Agent
 
-# Constants from specification
-RATIONING_EPS = 1e-10  # Prevent division by zero in rationing
-FEASIBILITY_TOL = 1e-10  # Conservation and feasibility checks
+# Import constants from centralized source
+try:
+    from constants import RATIONING_EPS, FEASIBILITY_TOL
+except ImportError:
+    # Fallback for different execution contexts
+    from src.constants import RATIONING_EPS, FEASIBILITY_TOL
 
 logger = logging.getLogger(__name__)
 

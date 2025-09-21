@@ -27,11 +27,12 @@ import scipy.optimize
 from typing import List, Tuple, Optional
 import logging
 
-# Constants from SPECIFICATION.md - single source of truth
-SOLVER_TOL = 1e-8        # Primary convergence: ||Z_rest||_∞ < SOLVER_TOL  
-FEASIBILITY_TOL = 1e-10  # Conservation and feasibility checks
-NUMERAIRE_GOOD = 0       # Good 1 is numéraire (p[0] ≡ 1.0)
-MIN_ALPHA = 0.05         # Minimum preference weight (ensures interior solutions)
+# Import constants from centralized source
+try:
+    from constants import SOLVER_TOL, FEASIBILITY_TOL, NUMERAIRE_GOOD, MIN_ALPHA
+except ImportError:
+    # Fallback for different execution contexts
+    from src.constants import SOLVER_TOL, FEASIBILITY_TOL, NUMERAIRE_GOOD, MIN_ALPHA
 
 logger = logging.getLogger(__name__)
 
