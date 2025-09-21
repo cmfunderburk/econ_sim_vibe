@@ -25,7 +25,7 @@ Welcome to the economic simulation project! This guide will help you get started
 
 **FUNCTIONAL STATUS**:
 - ✅ **Working Import System**: All src.* modules properly importable with `pip install -e .`
-- ✅ **Complete Test Suite**: 197/197 tests passing (185 unit tests + 12 validation scenarios)
+- ✅ **Complete Test Suite**: 217/217 tests passing (205 unit tests + 12 validation scenarios)
 - ✅ **Production Environment**: Full development environment with working setup instructions
 - ✅ **Research-Ready Platform**: Complete spatial Walrasian equilibrium implementation
 
@@ -48,7 +48,7 @@ pip install -r requirements-dev.txt  # For development tools
 pip install -e .
 
 # Verify working setup:
-make test          # ✅ WORKS: 197/197 tests passing
+make test          # ✅ WORKS: 217/217 tests passing
 make validate      # ✅ WORKS: All validation scenarios pass
 pytest tests/     # ✅ WORKS: All modules properly importable
 ```
@@ -149,7 +149,7 @@ econ_sim_vibe/
 **BEFORE attempting any development**:
 1. **Use Working Setup**: Follow the verified setup instructions above
 2. **Install Package**: Run `pip install -e .` after creating virtual environment  
-3. **Verify Tests**: Run `make test` to confirm 197/197 tests pass
+3. **Verify Tests**: Run `make test` to confirm 217/217 tests pass
 4. **Start Development**: Complete economic platform ready for contributions
 
 ### Code Standards (When Environment Works)
@@ -181,14 +181,14 @@ econ_sim_vibe/
 #### Test Status Verified ✅
 The project provides complete test coverage with verified functionality:
 - **Import system working**: All modules properly importable after package installation
-- **197/197 tests passing**: Complete validation including unit tests and economic scenarios
+- **217/217 tests passing**: Complete validation including unit tests and economic scenarios
 - **Production-ready**: Full economic simulation platform ready for research
 
 #### Working Test Commands
 ```bash
 # These commands work with proper setup:
 pip install -e .        # Install package in development mode ✅
-make test               # Run full test suite (197/197 passing) ✅
+make test               # Run full test suite (217/217 passing) ✅
 pytest tests/unit/ -v   # Run unit tests (74/74 passing) ✅
 pytest tests/validation/ -v # Run validation scenarios (10/10 passing) ✅
 ```  

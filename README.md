@@ -12,7 +12,7 @@ A research-grade economic simulation platform for studying spatial frictions in 
 - **Economic Engine**: Walrasian equilibrium solver with Cobb-Douglas utilities
 - **Agent Framework**: Simplified inventory management with full economic correctness
 - **Market Clearing**: Constrained execution with proportional rationing
-- **Test Suite**: 197/197 tests passing (185 unit + 12 validation scenarios)
+- **Test Suite**: 217/217 tests passing (205 unit + 12 validation scenarios)
 - **Package Configuration**: Working setup.py and pytest.ini for development
 
 **PHASE 2 - BASIC IMPLEMENTATION 🚧**:
@@ -25,7 +25,7 @@ A research-grade economic simulation platform for studying spatial frictions in 
 
 **✅ Complete & Functional**:
 - **Economic Engine**: Core agent framework, equilibrium solver, market clearing mechanisms
-- **Test Framework**: 197/197 tests passing (185 unit + 12 validation; V1–V10 plus enhanced real-function variants)
+- **Test Framework**: 217/217 tests passing (205 unit + 12 validation; V1–V10 plus enhanced real-function variants)
 - **Simplified Inventory Management**: Agents load full home inventory at cycle start, eliminating strategic withholding complexity
 - **Package Configuration**: Working setup.py, pytest.ini, requirements.txt
 - **Spatial Infrastructure**: Basic grid movement and marketplace detection working
@@ -37,6 +37,18 @@ A research-grade economic simulation platform for studying spatial frictions in 
 - **Local Price Formation**: Uses global Walrasian pricing (Phase 2 uses LTE on marketplace participants)
 
 **📋 Planned / In-Progress Advanced Features**:
+## ✨ Recent Enhancements (2025-09-21)
+Robustness and observability improvements have been added since the initial Phase 2 baseline:
+
+- Solver fallback: Adaptive tâtonnement engages automatically if primary `fsolve` convergence is poor, guaranteeing non-worsening residuals.
+- Enhanced invariants: Movement monotonicity, randomized conservation fuzz, per-agent value feasibility proxy.
+- Structured logging hardening: Canonical schema guard test ensures field stability (`SCHEMA_VERSION=1.0.0`).
+- Compression support: Optional gzip for JSONL and Parquet outputs via `RunLogger(compress=True)`.
+- Financing mode tagging: All records now populate `financing_mode="PERSONAL"` (foundation for future multi-mode analysis).
+- Configuration validation: Early aggregated validation (`validate_simulation_config`) catches invalid grid / marketplace / agent parameter combinations.
+
+Planned follow-ups: effective budget logging, warm-started solver hints, CLI flag for compressed logging, console entry points, and performance benchmark harness.
+
 - **A* Pathfinding**: Optimal pathfinding with obstacle avoidance (not yet implemented)
 - **Data Persistence**: Parquet logging with schema versioning (hooks exist, not fully implemented)
 - **Real-time Visualization**: pygame visualization system (basic --no-gui mode works)
@@ -68,7 +80,7 @@ pip install -e .
 
 ### Running Tests and Simulations
 ```bash
-# Run full test suite (197/197 tests pass - 100% success rate)
+# Run full test suite (217/217 tests pass - 100% success rate)
 make test
 
 # Run validation scenarios (all 12 scenarios pass)
@@ -119,6 +131,8 @@ Home ↔ Personal ↔ Market
 - **Scalable**: Target: 100+ agents with <30 seconds per 1000 rounds
 - **Extensible**: Plugin architecture for utility functions and movement policies
 - **Research-Grade**: Parquet logging, git SHA tracking, comprehensive validation
+       - Schema safety net: Logging schema guard test prevents silent breaking changes.
+       - Config safety net: Early validation rejects inconsistent or degenerate scenarios.
 
 ### Financing Model (Summary)
 Personal-inventory financing enforced (PERSONAL mode). See `docs/STATUS.md` for mode semantics and future TOTAL_WEALTH notes.
@@ -135,7 +149,7 @@ Each round follows the spatial Walrasian protocol:
 **Termination**: Simulation stops at T ≤ 200 rounds, when all agents reach marketplace with total unmet demand/supply below tolerance for 5 consecutive rounds, or after max_stale_rounds without meaningful progress.
 
 ### Validation Framework (Summary)
-197/197 tests passing (185 unit + 12 validation). Scenario descriptions and expected metrics live in `docs/STATUS.md` and full economic detail in `SPECIFICATION.md`.
+217/217 tests passing (205 unit + 12 validation). Scenario descriptions and expected metrics live in `docs/STATUS.md` and full economic detail in `SPECIFICATION.md`.
 
 ## Documentation Index
 Primary references:

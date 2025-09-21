@@ -3,7 +3,7 @@
 Updated: 2025-09-21
 
 ## Test & Quality Summary
-- 197/197 tests passing (185 unit + 12 validation)
+- 217/217 tests passing (205 unit + 12 validation)
 - FinancingMode toggle implemented: PERSONAL (active), TOTAL_WEALTH (placeholder)
 - Regression guard ensures default behavior == explicit PERSONAL
 - Movement: Greedy step toward marketplace (A* not yet implemented)
@@ -22,7 +22,7 @@ Updated: 2025-09-21
 | Pathfinding (A*) | Not Implemented | Pending priority decision |
 
 ## Recent Milestones
-- Synchronized documentation test counts to 197/197
+- Synchronized documentation test counts to 217/217
 - Added FinancingMode regression test
 - Clarified movement is greedy (not A*) across docs
 - Consolidated overlapping documentation into single status/roadmap/developer set
