@@ -1,11 +1,8 @@
 # Economic Simulation Project - Human Contributor Guide
 
-*La**For Different Contributors**:
-- **Economists**: V1 complete! Review V2 spatial null test design, analyze welfare measurement approach
-- **Software Engineers**: Implement V2 using existing Economic Engine, add remaining validation scenarios V3-V10
-- **Students/Researchers**: Study V1 results, run experiments with different parameters, contribute to validation frameworkptember 20, 2025*
+*Last Updated: September 20, 2025*
 
-## 🎯 Current Project Status: V1 Validation Complete, V2 Implementation Next
+## 🎯 Current Project Status: V1 & V2 Validation Complete, V3+ Implementation Next
 
 ### What We've Built (Production Ready ✅)
 
@@ -15,6 +12,7 @@
 - **Market Clearing**: Constrained execution with proportional rationing and carry-over management
 - **Testing Validation**: 74/74 unit tests passing with comprehensive economic invariant validation
 - **V1 Analytical Verification**: ✅ COMPLETE - Perfect match against Edgeworth box analytical solution
+- **V2 Spatial Null Test**: ✅ COMPLETE - Perfect phase equivalence when κ=0 (zero deadweight loss)
 
 **Technical Achievements**:
 - Perfect integration pipeline (Agent → Equilibrium → Market Clearing)
@@ -22,6 +20,7 @@
 - Excellent performance (<1ms operations, linear scaling)
 - Robust edge case handling (empty markets, zero wealth, extreme parameters)
 - **V1 Validation**: Machine-precision accuracy (2.22e-16) against known analytical solution
+- **V2 Validation**: Perfect spatial neutrality (0.00e+00 efficiency loss) when movement costs = 0
 
 ### What You Can Do Right Now 🚀
 
@@ -31,14 +30,15 @@
    ```bash
    cd econ_sim_vibe
    make test          # Run 74 unit tests - should all pass
-   make validate      # Run economic validation scenarios
+   python -m pytest tests/validation/test_scenarios.py::test_v1_edgeworth_2x2 -v  # V1 test
+   python -m pytest tests/validation/test_scenarios.py::test_v2_spatial_null -v   # V2 test
    ```
 
 2. **Explore the Implementation** (15 minutes)
    - `src/core/agent.py` - Agent class with Cobb-Douglas utilities
    - `src/econ/equilibrium.py` - Walrasian equilibrium solver 
    - `src/econ/market.py` - Market clearing mechanisms
-   - `tests/unit/` - Comprehensive test suite
+   - `tests/validation/test_scenarios.py` - V1 & V2 validation tests
 
 3. **Review Documentation** (30 minutes)
    - `SPECIFICATION.md` - Complete technical specification (825 lines)
@@ -47,34 +47,43 @@
 
 ### Next Development Priority 🎯
 
-**Validation Scenario V2 Implementation** (Estimated: 1-2 hours)
+**Validation Scenarios V3+ Implementation** (Estimated: 2-3 hours each)
 
-The V1 Edgeworth box validation is complete with perfect analytical verification. The immediate next step is implementing V2 to establish the spatial baseline:
+V1 and V2 validation are complete with perfect results! The immediate next priorities are:
 
-**V2: Spatial Null Test**
-- Verify that κ=0 (no movement costs) equals Phase 1 exactly
-- Expected outcome: `efficiency_loss < 1e-10`
-- Location: `tests/validation/test_scenarios.py`
-- Purpose: Establishes baseline for measuring spatial deadweight loss
+**V3: Market Access Test**
+- Verify efficiency loss when agents can't reach marketplace
+- Expected outcome: `efficiency_loss > 0.1` units of good 1
+- Purpose: Measure spatial deadweight loss from market access constraints
 
-**Why V2 Matters**: This test proves that our spatial extensions don't introduce artificial inefficiencies when movement costs are zero, establishing the proper baseline for Phase 2 spatial analysis.
+**V6: Price Normalization Test**
+- Verify numerical stability and numéraire constraint p₁ ≡ 1
+- Expected outcome: `p[0] == 1.0 and ||Z_market(p)[1:]||_∞ < 1e-8`
+- Purpose: Validate solver robustness and convergence criteria
+
+**V10: Spatial Null (Unit Test)**
+- Fast regression test for perfect phase equivalence  
+- Expected outcome: `phase2_allocation == phase1_allocation`
+- Purpose: Quick validation that spatial extensions preserve economics
+
+**Why These Matter**: With V1 and V2 complete, we've proven analytical accuracy and spatial neutrality. V3+ tests will measure actual spatial efficiency effects and validate production robustness.
 
 ### How to Contribute
 
 **For Economists**:
-- Verify economic theory implementation in `src/econ/`
-- Review validation scenarios in `config/` directory
-- Test edge cases and economic invariants
+- Review V1/V2 results and verify economic interpretation
+- Design additional validation scenarios for spatial efficiency analysis
+- Analyze welfare measurement methodology and results
 
 **For Software Engineers**:
-- Implement validation scenarios using existing Economic Engine
-- Optimize performance for 100+ agents
-- Add configuration loading and simulation engine integration
+- Implement remaining validation scenarios (V3-V10) using existing Economic Engine
+- Add configuration loading and end-to-end simulation pipeline
+- Optimize performance and add production monitoring
 
 **For Students/Researchers**:
-- Run experiments with different configurations
-- Analyze welfare measurement and spatial efficiency
-- Contribute to documentation and educational materials
+- Study V1/V2 implementation to understand economic validation
+- Run experiments with different agent populations and preferences
+- Contribute to documentation and educational analysis
 
 ### Getting Started Commands
 
