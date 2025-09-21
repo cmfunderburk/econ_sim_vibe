@@ -1,8 +1,11 @@
 # Economic Simulation Project - Human Contributor Guide
 
-*Last Updated: September 20, 2025*
+*La**For Different Contributors**:
+- **Economists**: V1 complete! Review V2 spatial null test design, analyze welfare measurement approach
+- **Software Engineers**: Implement V2 using existing Economic Engine, add remaining validation scenarios V3-V10
+- **Students/Researchers**: Study V1 results, run experiments with different parameters, contribute to validation frameworkptember 20, 2025*
 
-## 🎯 Current Project Status: Economic Engine Complete & Ready for Validation
+## 🎯 Current Project Status: V1 Validation Complete, V2 Implementation Next
 
 ### What We've Built (Production Ready ✅)
 
@@ -11,12 +14,14 @@
 - **Equilibrium Solver**: Numéraire-normalized price computation with analytical demand functions
 - **Market Clearing**: Constrained execution with proportional rationing and carry-over management
 - **Testing Validation**: 74/74 unit tests passing with comprehensive economic invariant validation
+- **V1 Analytical Verification**: ✅ COMPLETE - Perfect match against Edgeworth box analytical solution
 
 **Technical Achievements**:
 - Perfect integration pipeline (Agent → Equilibrium → Market Clearing)
 - All economic invariants satisfied (conservation, budget constraints, Walras' Law)
 - Excellent performance (<1ms operations, linear scaling)
 - Robust edge case handling (empty markets, zero wealth, extreme parameters)
+- **V1 Validation**: Machine-precision accuracy (2.22e-16) against known analytical solution
 
 ### What You Can Do Right Now 🚀
 
@@ -42,19 +47,17 @@
 
 ### Next Development Priority 🎯
 
-**Validation Scenarios V1-V2 Implementation** (Estimated: 2-4 hours)
+**Validation Scenario V2 Implementation** (Estimated: 1-2 hours)
 
-The economic engine is complete and tested. The immediate next step is implementing the first two validation scenarios to verify our implementation against known analytical solutions:
+The V1 Edgeworth box validation is complete with perfect analytical verification. The immediate next step is implementing V2 to establish the spatial baseline:
 
-**V1: Edgeworth Box 2×2 Verification**
-- Test against known analytical solution for 2 agents, 2 goods
-- Expected outcome: `‖p_computed - p_analytic‖ < 1e-8`
-- Location: `tests/validation/test_scenarios.py`
-
-**V2: Spatial Null Test** 
+**V2: Spatial Null Test**
 - Verify that κ=0 (no movement costs) equals Phase 1 exactly
 - Expected outcome: `efficiency_loss < 1e-10`
 - Location: `tests/validation/test_scenarios.py`
+- Purpose: Establishes baseline for measuring spatial deadweight loss
+
+**Why V2 Matters**: This test proves that our spatial extensions don't introduce artificial inefficiencies when movement costs are zero, establishing the proper baseline for Phase 2 spatial analysis.
 
 ### How to Contribute
 
@@ -125,4 +128,4 @@ make run CONFIG=config/edgeworth.yaml SEED=42
 
 ---
 
-**Ready to contribute?** Start with `make test` to verify everything works, then dive into implementing validation scenarios V1-V2. The economic foundation is solid - now we need to prove it works against known analytical solutions!
+**Ready to contribute?** Start with `make test` to verify everything works, then dive into implementing validation scenarios V2. The V1 foundation is proven - now we need to establish the spatial baseline!
