@@ -35,6 +35,56 @@ The following achievements have been validated through comprehensive testing:
 - Package configuration (setup.py, pytest.ini) enables functional development environment
 - Working setup instructions that function in fresh environments
 - Reality-based documentation reflecting actual production-ready functionality
+
+## 🔍 CRITICAL IMPLEMENTATION GAPS IDENTIFIED (September 2025)
+
+### ⚠️ Documentation vs Implementation Misalignment DISCOVERED
+**Post-cleanup analysis revealed remaining credibility issues**:
+- **Internal README Contradictions**: Claims "Parquet logging" while listing as missing
+- **SPECIFICATION Overpromising**: Documents "myopic A*" and "budget-side cost deductions" that don't exist
+- **Impact**: Undermines recent documentation cleanup achievements
+
+### 🚨 Core Phase 2 Functionality Missing
+**Key spatial friction mechanisms are documented but non-functional**:
+- **Travel Cost Integration**: `_generate_agent_orders` ignores travel-adjusted budgets w_i = max(0, p·ω_total - κ·d_i)
+- **Movement Implementation**: Only single greedy step, not documented "myopic A*" pathfinding  
+- **TODO at line 141**: scripts/run_simulation.py records distance but never deducts κ·d from wealth
+- **Result**: Spatial costs have no effect on agent behavior despite being core design feature
+
+### 🔧 Technical Debt Issues
+- **Dual Position Classes**: Incompatible types in src/core/types.py and src/spatial/grid.py
+- **Test Prerequisites**: pip install -e . requirement not sufficiently emphasized
+
+## 🛠️ CONCRETE IMPROVEMENT PRIORITIES
+
+### **IMMEDIATE: Credibility Restoration (30 minutes)**
+1. **Fix README contradictions**: Remove false "Parquet logging" claims from features
+2. **Update SPECIFICATION.md**: Add implementation status notes ("planned" vs "implemented")
+3. **Align movement docs**: Change "myopic A*" to match actual single-step greedy behavior
+4. **Clarify prerequisites**: Emphasize pip install -e . requirement for tests
+
+### **HIGH PRIORITY: Core Functionality (1-2 hours)**  
+5. **Implement travel costs**: Add budget deduction in scripts/run_simulation.py:141
+6. **Fix order generation**: Update _generate_agent_orders to use travel-adjusted wealth
+7. **Unify Position types**: Choose src/spatial/grid.py as canonical Position class
+
+### **RESEARCH DECISION: Movement Policy (Variable time)**
+8. **Option A - Full A* Implementation**: 2-3 hours, enables sophisticated spatial research
+9. **Option B - Honest Documentation**: 15 minutes, align docs with simple greedy movement
+
+### **Specific Code Changes Required**:
+```python
+# Priority 1: scripts/run_simulation.py (line 141 TODO)
+distance_moved = agent.move_one_step_toward_marketplace()
+# ADD: agent.wealth -= movement_cost * distance_moved
+
+# Priority 2: src/econ/market.py _generate_agent_orders  
+# CHANGE: Use w_i = max(0, p·ω_total - κ·d_i) instead of personal inventory only
+
+# Priority 3: Position unification
+# REMOVE: src/core/types.py Position class
+# USE: src/spatial/grid.py Position everywhere
+```
 ## Implementation Patterns & Standards (When Environment Works)
 
 ### File Organization
@@ -226,7 +276,29 @@ flake8>=6.0.0          # Linting
 3. **Use proper mathematical notation** from SPECIFICATION.md (Z_market, not Z)
 4. **Test against known analytical solutions** (Edgeworth box, simple cases)
 5. **Follow .gitignore rules** - exclude venv/, __pycache__/, *.pyc, etc.
-6. **Focus on Phase 1 implementation** - spatial features come later
+6. **Focus on research applications** - platform is ready for serious economic work
+
+### Critical Implementation Gaps (September 2025 Analysis)
+**BEFORE implementing new features, be aware of these known issues**:
+
+1. **Documentation Alignment**: Check for internal contradictions (e.g., claiming features that are listed as missing)
+2. **Travel Cost Gap**: Core spatial mechanism documented but non-functional - agents not charged for movement
+3. **Movement Policy Mismatch**: Spec promises "myopic A*" but code implements single greedy step
+4. **Position Type Drift**: Two incompatible Position classes risk integration bugs
+5. **Test Prerequisites**: Emphasize pip install -e . requirement for pytest functionality
+
+### When Implementing Spatial Features
+**Priority Order for Phase 2 Completion**:
+1. **Travel cost integration first** - core spatial friction mechanism
+2. **Position unification** - architectural cleanup 
+3. **Movement policy decision** - A* implementation vs documentation alignment
+4. **Documentation sync** - ensure promises match implementation
+
+### Decision Framework for Future Work
+**When user requests spatial improvements, present these options**:
+- **Option A: Implement missing features** (travel costs, A*) for full spatial research capability
+- **Option B: Align documentation** with current greedy movement for honest representation  
+- **Option C: Research applications** using excellent Phase 1 engine while spatial gaps exist
 
 ### Current Implementation Context
 - **Complete working code base**: All economic components functional and verified

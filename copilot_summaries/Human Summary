@@ -186,6 +186,74 @@ make check             # ✅ WORKS: Quality checks
 - Aligned capability descriptions with actual implementation  
 - Professional presentation now matches excellent economic engine quality
 
+## 🔍 Critical Analysis: Remaining Implementation Gaps (September 2025)
+
+**Post-Documentation Cleanup Critique Identified Remaining Issues**:
+
+### ⚠️ Documentation vs Implementation Misalignment
+- **Internal Contradictions**: README claims "Parquet logging" while listing it as missing feature
+- **SPECIFICATION Overpromising**: Promises "myopic A*" and "budget-side cost deductions" that don't exist
+- **Impact**: Credibility damage despite presentation improvements
+
+### 🚨 Core Functionality Gaps  
+- **Travel Cost Implementation**: `_generate_agent_orders` ignores travel-adjusted budgets w_i = max(0, p·ω_total - κ·d_i)
+- **Movement Policy**: Only single greedy step, not documented "myopic A*" pathfinding
+- **TODO Placeholder**: scripts/run_simulation.py:141 records distance but never deducts κ·d from wealth
+- **Impact**: Key Phase 2 spatial friction mechanism is non-functional
+
+### 🔧 Technical Debt
+- **Dual Position Classes**: Incompatible Position types in src/core/types.py and src/spatial/grid.py
+- **Test Prerequisites**: pip install -e . requirement not emphasized enough for contributors
+- **Impact**: Risk of subtle bugs and contributor setup failures
+
+## 🛠️ Concrete Improvement Roadmap
+
+### **Phase 1: Credibility Restoration (30 minutes)**
+1. Fix internal README contradictions (remove false Parquet logging claims)
+2. Add implementation status notes to SPECIFICATION.md ("planned" vs "implemented")  
+3. Update movement description to match actual single-step behavior
+4. Clarify test prerequisites (emphasize pip install -e . requirement)
+
+### **Phase 2: Core Functionality (1-2 hours)**
+5. Implement travel cost budget integration in scripts/run_simulation.py:141
+6. Update `_generate_agent_orders` in src/econ/market.py to use travel-adjusted wealth  
+7. Unify Position classes (choose src/spatial/grid.py as canonical)
+
+### **Phase 3: Movement Policy Decision (Research-Dependent)**
+8. **Option A**: Implement actual A* pathfinding (2-3 hours, high research value)
+9. **Option B**: Update spec to match greedy movement (15 minutes, medium research value)
+
+### **Specific Code Changes Needed**:
+```python
+# 1. scripts/run_simulation.py (line 141):
+distance_moved = agent.move_one_step_toward_marketplace()
+agent.wealth -= movement_cost * distance_moved  # ADD THIS
+
+# 2. src/econ/market.py _generate_agent_orders:
+# Current: uses personal inventory only  
+# Change: use w_i = max(0, p·ω_total - κ·d_i) for budget constraint
+
+# 3. Position unification:
+# Remove src/core/types.py Position, use src/spatial/grid.py Position everywhere
+```
+
+### **Decision Points for Future Sessions**:
+- **Documentation vs Implementation**: Fix docs to match code, or implement missing features?
+- **A* vs Greedy**: Implement sophisticated pathfinding or honest simple movement docs?
+- **Research Priority**: Core travel costs (spatial frictions) vs full A* implementation?
+
+## 🚀 Future Session Context
+
+**Current State**: Documentation integrity restored, but implementation gaps identified
+**Next Priority Options**:
+1. **Quick credibility fix** (30 min): Remove contradictions, align docs with implementation
+2. **Core functionality** (1-2 hours): Implement travel cost budget integration for real spatial frictions  
+3. **Research applications** (immediate): Use excellent Phase 1 engine while gaps exist
+
+**Key Question**: Does user want to fix documentation to match current simple implementation, or implement missing features to match ambitious documentation?
+
+**Code Ready for**: All Phase 1 research applications, partial Phase 2 with known limitations
+
 ---
 
 **Ready to contribute?** Start with `make test` to verify everything works, then explore the complete validation framework. Choose from three clear development paths based on your goals. The economic engine is production-ready for serious research! 🚀
