@@ -1,4 +1,10 @@
-# Economic Simulation Implementation Roadmap
+<!-- Archived: See docs/ROADMAP.md -->
+# (Archived) Economic Simulation Implementation Roadmap
+
+This historical roadmap has been consolidated into `docs/ROADMAP.md` as of 2025-09-21.
+Only retained for provenance; do not update. New planning changes belong in the consolidated roadmap.
+
+---
 
 ## ✅ PHASE 1 COMPLETE (September 2025)
 

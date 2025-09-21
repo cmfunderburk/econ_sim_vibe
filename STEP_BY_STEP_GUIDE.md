@@ -212,7 +212,8 @@ python -c "from src.spatial.grid import Position; print('Position import success
 python -m pytest tests/unit/test_components.py -v
 ```
 
-## Step 4: Update Failing Tests (1-2 hours)
+<!-- Archived: Some procedural content integrated into docs/DEVELOPER_GUIDE.md -->
+## (Archived) Step 4: Update Failing Tests (1-2 hours)
 
 ### Implementation Steps
 

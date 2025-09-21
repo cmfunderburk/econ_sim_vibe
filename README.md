@@ -120,22 +120,8 @@ Home ↔ Personal ↔ Market
 - **Extensible**: Plugin architecture for utility functions and movement policies
 - **Research-Grade**: Parquet logging, git SHA tracking, comprehensive validation
 
-### Financing Model
-Current Phase‑2 baseline uses **personal‑inventory financing** (FinancingMode.PERSONAL):
-- Agents may only finance purchases with goods they physically carried to the marketplace (personal inventory). No borrowing against home inventory.
-- Value feasibility per round: p·(executed buys) ≤ p·(executed sells) + ε.
-- Prices are computed from participants' total endowments (home + personal) to form the Local Theoretical Equilibrium (LTE); execution is constrained by personal inventory, generating a measurable liquidity gap.
-- Travel costs reduce theoretical wealth diagnostically but do not expand financing capacity (future modes may deduct explicit numéraire units on movement).
-
-Implemented extension introduces a `FinancingMode` toggle (regression‑guarded):
-```
-FinancingMode = Enum('FinancingMode', ['PERSONAL', 'TOTAL_WEALTH'])
-```
-Mode semantics:
-- PERSONAL (default, active): Pure barter constraint with proportional rationing (enforced: p·executed_buys ≤ p·executed_sells + ε). Backward compatibility guaranteed by a regression test that compares default vs explicit PERSONAL mode.
-- TOTAL_WEALTH (placeholder): Enum entry present; future behavior will size orders off total (travel‑adjusted) wealth with modified feasibility rule p·buys ≤ p·ω_total.
-
-Rationale: Decoupling price formation (total endowment) from financing scope (personal vs total) enables experiments on liquidity frictions without altering equilibrium fundamentals.
+### Financing Model (Summary)
+Personal-inventory financing enforced (PERSONAL mode). See `docs/STATUS.md` for mode semantics and future TOTAL_WEALTH notes.
 
 ## Simulation Protocol
 
@@ -148,37 +134,15 @@ Each round follows the spatial Walrasian protocol:
 
 **Termination**: Simulation stops at T ≤ 200 rounds, when all agents reach marketplace with total unmet demand/supply below tolerance for 5 consecutive rounds, or after max_stale_rounds without meaningful progress.
 
-### Validation Framework
+### Validation Framework (Summary)
+197/197 tests passing (185 unit + 12 validation). Scenario descriptions and expected metrics live in `docs/STATUS.md` and full economic detail in `SPECIFICATION.md`.
 
-The project includes **10 core validation scenarios + 2 enhanced real-function validation tests** with all tests passing:
-
-**V1-V10 Scenarios (All Verified ✅)**:
-| Scenario | Purpose | Status | Expected Outcome |
-|----------|---------|---------|------------------|
-| **V1: Edgeworth 2×2** | Analytic verification | ✅ PASS | `‖p_computed - p_analytic‖ < 1e-8` |
-| **V2: Spatial Null** | Friction-free baseline | ✅ PASS | `efficiency_loss < 1e-10` |
-| **V3: Market Access** | Spatial efficiency loss | ✅ PASS | `efficiency_loss > 0.1` |
-| **V4: Throughput Cap** | Market rationing effects | ✅ PASS | `uncleared_orders > 0` |
-| **V5: Spatial Dominance** | Welfare bounds | ✅ PASS | `spatial_welfare ≤ walrasian_welfare` |
-| **V6: Price Normalization** | Numerical stability | ✅ PASS | `p₁ ≡ 1 and ||Z_market(p)||_∞ < 1e-8` |
-| **V7: Empty Marketplace** | Edge case handling | ✅ PASS | `prices = None, trades = []` |
-| **V8: Stop Conditions** | Termination logic | ✅ PASS | Proper termination detection |
-| **V9: Scale Invariance** | Numerical robustness | ✅ PASS | Price scaling consistency |
-| **V10: Spatial Null (Unit Test)** | Regression testing | ✅ PASS | Phase equivalence validation |
-
-**Complete Validation Framework**:
-- **197/197 tests passing** (185 unit tests + 12 validation scenarios)
-- **Complete economic validation** covering all fundamental properties
-- **Comprehensive edge case handling** for robust real-world deployment
-- **Research-grade validation** suitable for publication-quality experiments
-
-## Documentation
-
-- **[SPECIFICATION.md](SPECIFICATION.md)** - Complete technical specification (825 lines)
-- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development workflow and standards
-- **[.github/copilot-instructions.md](.github/copilot-instructions.md)** - AI development assistant configuration
-- **requirements.txt** - Python dependencies
-- **config/** - Validation scenarios and simulation configurations
+## Documentation Index
+Primary references:
+- `docs/STATUS.md` (current state)
+- `docs/ROADMAP.md` (priorities & backlog)
+- `docs/DEVELOPER_GUIDE.md` (developer workflow)
+- `SPECIFICATION.md` (theory & algorithms)
 
 ## Dependencies
 
@@ -196,23 +160,7 @@ The project includes **10 core validation scenarios + 2 enhanced real-function v
 - **numba** - Optional JIT compilation for performance
 
 ## Contributing
-
-This project provides a complete, functional development environment for economic simulation research:
-
-1. **Working Setup**: Follow the verified setup instructions above
-2. **Test Everything**: All 84 tests pass with proper package installation  
-3. **Economic Validation**: Complete V1-V10 validation scenarios ready for research
-4. **Development Ready**: Full economic engine with spatial extensions implemented
-
-**Development Commands**:
-```bash
-make test              # ✅ WORKS: 197/197 tests passing
-make validate          # ✅ WORKS: All validation scenarios pass
-make format            # Format code
-make check             # Quality checks (lint + test)
-```
-
-See [SPECIFICATION.md](SPECIFICATION.md) for theoretical guidelines and [CONTRIBUTING.md](CONTRIBUTING.md) for development workflow.
+See `docs/DEVELOPER_GUIDE.md` for setup & commands, and `CONTRIBUTING.md` for contribution standards.
 
 ## Questions? Need Help?
 

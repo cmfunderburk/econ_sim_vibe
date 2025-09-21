@@ -1,4 +1,5 @@
-# Economic Simulation Test Suite - Final Status Report
+<!-- Archived milestone snapshot. Current status: docs/STATUS.md -->
+# (Archived) Economic Simulation Test Suite - Final Status Report
 
 ## 🎯 Mission Accomplished: Test Philosophy Transformation Complete
 

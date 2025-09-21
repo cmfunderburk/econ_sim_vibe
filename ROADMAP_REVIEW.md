@@ -1,4 +1,8 @@
-# Roadmap Review and Validation
+<!-- Archived: See docs/ROADMAP.md -->
+# (Archived) Roadmap Review and Validation
+
+Content migrated to `docs/ROADMAP.md` (2025-09-21). Keep for historical trace only.
+---
 
 ## Executive Summary
 
