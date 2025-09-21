@@ -1,10 +1,27 @@
-# Econ## 🎯 Current Development Status
+# Economic Simulation Vibe: Spatial Walrasian Markets
 
-### Production-Ready Economic Simulation Platform
+A research-grade economic simulation platform for studying spatial frictions in market economies. This project implements agent-based modeling of economic exchange with spatial constraints, movement costs, and centralized marketplace trading.
 
-**FUNCTIONAL STATUS**:
-- ✅ **Complete pment Environment**: Working setup.py enables proper package installation
-- ✅ **Import System Working**: All src.* modules properly importable after `pip install -e .`
+*Forked from the original econ_sim_base project.*
+
+## 🎯 Current Development Status
+
+### Production-Ready Economic Engine with Spatial Infrastructure
+
+**PHASE 1 - COMPLETE ✅**:
+- **Economic Engine**: Walrasian equilibrium solver with Cobb-Douglas utilities
+- **Agent Framework**: Complete inventory management and utility maximization
+- **Market Clearing**: Constrained execution with proportional rationing
+- **Test Suite**: 84/84 tests passing (74 unit tests + 10 validation scenarios)
+- **Package Configuration**: Working setup.py and pytest.ini for development
+
+**PHASE 2 - PARTIAL 🚧**:
+- **Spatial Grid**: Basic positioning and marketplace detection
+- **Agent Movement**: Simple one-step movement toward marketplace
+- **Simulation Runner**: Functional with YAML configuration support
+- **Missing**: Travel cost budget integration (TODO placeholder exists)
+
+### Setup Instructions
 - ✅ **Test Su---
 
 **Ready to contribute?** Follow the setup instructions above to get started with the complete economic simulation platform! 🚀 Validated**: 84/84 tests passing (74 unit tests + 10 validation scenarios)
@@ -76,16 +93,17 @@ pytest tests/     # ✅ WORKS: All modules properly importable
 - **Test Framework**: 84/84 tests passing with comprehensive validation (V1-V10 scenarios)
 - **Package Configuration**: Working setup.py, pytest.ini, requirements.txt
 
-**⚠️ Limited Spatial Implementation**:
-- **Basic Grid**: Simple one-step movement (not A* pathfinding as advertised)
-- **Simulation Runner**: Exists but needs spatial integration completion
-- **Configuration Loading**: YAML configs exist but runtime integration incomplete
+**⚠️ Partial Spatial Implementation**:
+- **Basic Grid**: Simple one-step movement toward marketplace (no A* pathfinding)
+- **Simulation Runner**: Functional and works with YAML configs
+- **Missing**: Travel cost budget deduction (TODO placeholder only)
+- **Convergence Issues**: Some spatial scenarios show equilibrium solver warnings
 
-**❌ Missing Features** (currently overstated in documentation):
-- Travel cost budget adjustments not implemented
-- A* pathfinding not implemented (only greedy movement)
-- Parquet logging hooks not implemented
-- Plugin architecture not implemented
+**❌ Missing Features**:
+- **Travel Cost Budget Integration**: Movement costs configured but not deducted from agent wealth
+- **A* Pathfinding**: Only basic one-step movement toward marketplace implemented
+- **Parquet Logging**: Data logging hooks not implemented
+- **LTE Price Integration**: Still uses global Walrasian pricing (Phase 2 gap)
 
 ## Quick Start
 
