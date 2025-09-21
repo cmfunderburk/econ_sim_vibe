@@ -2,6 +2,7 @@
 numpy>=1.24.0
 pygame>=2.5.0
 scipy>=1.10.0
+pyyaml>=6.0  # YAML configuration loading
 
 # Performance optimization (optional)
 numba>=0.58.0

@@ -127,7 +127,7 @@ cd econ_sim_vibe
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-# Install dependencies
+# Install dependencies (includes PyYAML for configuration loading)
 pip install -r requirements.txt
 
 # Install package in editable mode (enables imports)
