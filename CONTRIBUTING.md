@@ -4,7 +4,7 @@ Welcome to the economic simulation project! This guide will help you get started
 
 ## 🎯 Current Development Status
 
-### Comple### Research Standards
+### Complete Research Standards
 
 ### Data Products
 - Log all simulation data to Parquet with schema versioning

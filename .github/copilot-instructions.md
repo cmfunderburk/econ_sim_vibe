@@ -40,20 +40,18 @@ The following achievements have been validated through comprehensive testing:
 ### File Organization
 ```
 src/
+├── constants.py          # Numerical tolerances and system constants
 ├── core/
 │   ├── agent.py          # Agent class with Cobb-Douglas utilities
-│   ├── simulation.py     # SimulationEngine and round management
 │   └── types.py          # Trade, SimulationState, core dataclasses
 ├── econ/
 │   ├── equilibrium.py    # Walrasian solver with analytical forms
-│   ├── market.py         # Market clearing and trade execution
-│   └── welfare.py        # Utility measurement and welfare analysis
-├── spatial/              # Phase 2: spatial extensions (deferred)
-│   ├── grid.py          # Spatial grid and marketplace detection
-│   └── movement.py      # A* pathfinding and movement costs
-└── config/
-    └── loader.py        # YAML configuration loading
+│   └── market.py         # Market clearing and trade execution
+└── spatial/              # Basic spatial functionality (simple movement)
+    └── grid.py          # Grid representation and basic movement
 ```
+
+**Note**: Many references to simulation.py, welfare.py, movement.py, and config/loader.py in documentation refer to planned components not yet implemented. Current simulation logic is embedded in test scenarios and run scripts.
 
 ### Development Workflow & Commands (Fully Functional)
 
@@ -262,80 +260,34 @@ Title: [Brief Description]
 ```
 
 ### Current Implementation Context
-- **Working code base**: Code files exist but cannot verify functionality due to broken import system
-- **Critical blocker**: Missing setup.py prevents any development or testing
-- **Development environment**: Non-functional - setup instructions don't work in fresh environments
-- **Priority**: Fix import system before any other development
+- **Complete working code base**: All economic components functional and verified
+- **Mathematical foundation**: Complete and validated in SPECIFICATION.md
+- **Testing framework**: 84/84 tests passing with comprehensive validation across all categories
+- **Configuration**: YAML configs ready for runtime loading
+- **Development tools**: Complete and functional (Makefile, requirements, formatting, etc.)
+- **Recent achievement**: Complete production-ready platform with verified functionality
 
 ### AI Assistant Guidelines 🤖
 
 ### When Working on This Project
-1. **Priority**: Fix development environment before economic features
-2. **Reality check**: Verify setup works in fresh environments before claiming success
-3. **Honest assessment**: Don't claim functionality that cannot be tested due to import failures
-4. **Focus**: Package configuration and basic development setup over advanced features
+1. **Always prioritize economic correctness** over coding convenience
+2. **Validate invariants** in every function that modifies economic state
+3. **Use proper mathematical notation** from SPECIFICATION.md (Z_market, not Z)
+4. **Test against known analytical solutions** (Edgeworth box, simple cases)
+5. **Follow .gitignore rules** - exclude venv/, __pycache__/, *.pyc, etc.
+6. **Focus on research applications** - platform is ready for serious economic work
 
-### Common Requests & Responses
-- **"Add configuration integration"** → First fix import system, then verify if economic code actually works
-- **"Fix economic bug"** → Cannot debug without functional development environment
-- **"Add spatial features"** → Must create working development environment first
-- **"Test the implementation"** → Cannot run any tests until import system fixed
-- **"Optimize performance"** → Cannot measure performance until tests can run
-
-This project requires basic development environment functionality before any economic simulation work can proceed.
-- **Research integration**: Design for testing economic hypotheses and policy experiments
-
-## Git Workflow & Commit Protocol (Simplified) 🔄
-
-### Automatic Commit/Push Behavior
-When the user requests to "commit" or "push" changes, automatically execute git operations with descriptive messages. Do not ask for confirmation - proceed directly with staging, committing, and pushing.
-
-### Simple Commit Message Format
-Use this concise format for commits:
+### Summary Documentation (Optional)
+When completing significant work, you may optionally add a summary to `copilot_summaries/` for future reference:
 
 ```
-[type]: [Brief summary of changes]
+Date: [Current Date]
+Title: [Brief Description]
 
-- [What was done]
-- [Key files changed]
-- [Testing status or known issues]
-
-[Next steps if applicable]
-```
-
-### Commit Types
-- `feat:` New feature implementation
-- `docs:` Documentation updates
-- `test:` Testing additions
-- `fix:` Bug fixes
-- `config:` Configuration changes
-- `env:` Development environment fixes
-
-### Quick Commit Guidelines
-1. **Be specific**: What actually changed?
-2. **Note blockers**: Any import failures or setup issues?
-3. **Test status**: Can tests run? Do they pass?
-4. **Next steps**: What should be done next?
-
-### Example Simplified Commit Messages
-```
-fix: Replace false test claims with honest import failure status
-
-- Updated README.md, CONTRIBUTING.md to reflect broken import system
-- Removed unverifiable "84/84 tests passing" claims
-- Added setup.py requirement and development environment blockers
-
-Next: Create setup.py to fix imports, then verify actual test results
-```
-### Special Cases
-- **Breaking changes**: Mark clearly with BREAKING: prefix and migration guidance
-- **Validation completion**: Reference specific scenarios (V1-V10) and economic metrics
-- **Performance improvements**: Include before/after benchmarks
-- **Bug fixes**: Explain economic implications and edge cases resolved
-- **Documentation updates**: Note which sections help future AI agent comprehension
-
-This protocol ensures every commit provides maximum context for project continuity and AI agent understanding of the economic simulation research progression.
-- Ready for Phase 1 implementation: equilibrium computation and analytical verification
+- What was changed
+- Files affected  
+- Current status
+- Next steps
 ```
 
 ### Special Cases

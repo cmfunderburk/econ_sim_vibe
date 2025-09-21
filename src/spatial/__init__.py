@@ -3,10 +3,18 @@ Spatial module: Grid management and agent movement.
 
 This module handles the spatial aspects of the simulation:
 - Grid representation with marketplace boundaries
-- Agent movement with A* pathfinding and Manhattan distance
+- Agent movement with basic pathfinding and Manhattan distance
 - Movement cost calculation and budget impacts
 - Marketplace access restrictions
+
+Note: Current implementation provides basic one-step greedy movement.
+A* pathfinding and budget adjustments are planned for future implementation.
 """
+
+# Import working implementations from submodules
+from .grid import Grid, Position
+
+__all__ = ['Grid', 'Position']
 
 import numpy as np
 from typing import List, Tuple, Set, Optional, Dict
