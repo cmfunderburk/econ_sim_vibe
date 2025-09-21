@@ -1,5 +1,5 @@
 # Economic Simulation Development Makefile
-.PHONY: help install install-dev test test-fast lint format check clean validate figures
+.PHONY: help install install-dev test test-fast lint format check clean validate
 
 # Default target
 help:
@@ -23,7 +23,7 @@ help:
 	@echo "  check        Run all quality checks"
 	@echo ""
 	@echo "Analysis:"
-	@echo "  figures      Regenerate plots from Parquet logs"
+	@echo "  # figures      Regenerate plots from Parquet logs (TODO: needs implementation)"
 	@echo "  profile      Profile performance bottlenecks"
 	@echo ""
 	@echo "Maintenance:"
@@ -40,17 +40,18 @@ install-dev: install
 # Simulation
 run:
 	@echo "Running simulation with CONFIG=$(CONFIG) SEED=$(SEED)"
-	OPENBLAS_NUM_THREADS=1 NUMEXPR_MAX_THREADS=1 python scripts/run_simulation.py --config $(CONFIG) --seed $(SEED)
+	PYTHONPATH=. OPENBLAS_NUM_THREADS=1 NUMEXPR_MAX_THREADS=1 python scripts/run_simulation.py --config $(CONFIG) --seed $(SEED)
 
 # Testing
 test:
-	OPENBLAS_NUM_THREADS=1 NUMEXPR_MAX_THREADS=1 pytest tests/ -v
+	PYTHONPATH=. OPENBLAS_NUM_THREADS=1 NUMEXPR_MAX_THREADS=1 pytest tests/ -v
 
 test-fast:
-	OPENBLAS_NUM_THREADS=1 NUMEXPR_MAX_THREADS=1 pytest tests/ -v -n auto
+	PYTHONPATH=. OPENBLAS_NUM_THREADS=1 NUMEXPR_MAX_THREADS=1 pytest tests/ -v -n auto
 
 validate:
-	OPENBLAS_NUM_THREADS=1 NUMEXPR_MAX_THREADS=1 pytest tests/validation/ -v --tb=short
+	@echo "Running economic validation scenarios..."
+	PYTHONPATH=. OPENBLAS_NUM_THREADS=1 NUMEXPR_MAX_THREADS=1 pytest tests/validation/ -v
 
 # Code quality
 lint:
@@ -65,9 +66,11 @@ format:
 check: lint test-fast
 
 # Analysis and visualization
-figures:
-	@echo "Regenerating figures from simulation logs..."
-	python scripts/generate_figures.py --input simulation_results/ --output figures/
+# Analysis
+# figures:
+# 	@echo "Regenerating figures from simulation logs..."
+# 	python scripts/generate_figures.py --input simulation_results/ --output figures/
+# TODO: Implement figure generation script
 
 profile:
 	@echo "Running performance profiling..."

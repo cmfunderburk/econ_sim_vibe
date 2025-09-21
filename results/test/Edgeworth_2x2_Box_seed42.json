@@ -1,0 +1,67 @@
+{
+  "config": {
+    "name": "Edgeworth_2x2_Box",
+    "n_agents": 2,
+    "n_goods": 2,
+    "grid_size": [
+      5,
+      5
+    ],
+    "movement_cost": 0.0,
+    "random_seed": 42
+  },
+  "final_round": 3,
+  "rounds": [
+    {
+      "round": 1,
+      "n_marketplace_agents": 1,
+      "total_agents": 2,
+      "prices": [
+        1.0,
+        1.0
+      ],
+      "n_trades": 0
+    },
+    {
+      "round": 2,
+      "n_marketplace_agents": 1,
+      "total_agents": 2,
+      "prices": [
+        1.0,
+        1.0
+      ],
+      "n_trades": 0
+    },
+    {
+      "round": 3,
+      "n_marketplace_agents": 2,
+      "total_agents": 2,
+      "prices": [
+        1.0,
+        1.0314801461301148
+      ],
+      "n_trades": 4
+    }
+  ],
+  "final_prices": [
+    1.0,
+    1.0314801461301148
+  ],
+  "agents_in_marketplace": 2,
+  "total_agents": 2,
+  "grid_summary": {
+    "grid_size": [
+      5,
+      5
+    ],
+    "marketplace_bounds": [
+      1,
+      1,
+      2,
+      2
+    ],
+    "total_agents": 2,
+    "marketplace_agents": 2,
+    "agents_outside_marketplace": 0
+  }
+}
