@@ -16,6 +16,7 @@ try:
 except ImportError:
     # Fallback for development environment
     import sys
+
     sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
     try:
         from constants import SOLVER_TOL, FEASIBILITY_TOL
@@ -27,11 +28,13 @@ except ImportError:
 # Test-specific constants
 TEST_TOLERANCE = 1e-10
 
+
 def load_config(config_name: str) -> dict:
     """Load a validation scenario configuration."""
     config_path = Path(__file__).parent.parent.parent / "config" / f"{config_name}.yaml"
-    with open(config_path, 'r') as f:
+    with open(config_path, "r") as f:
         return yaml.safe_load(f)
+
 
 # TODO: Add common test fixtures
 # TODO: Add economic property validation helpers

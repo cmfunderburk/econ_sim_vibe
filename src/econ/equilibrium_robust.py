@@ -104,14 +104,34 @@ class RobustEquilibriumSolver:
                 return (*result, diagnostics)
             return result
             
-        # Filter viable agents (positive wealth)
-        viable_agents = self._filter_viable_agents(agents)
+        # Initial guess for rest goods prices (needed for agent filtering)
+        if initial_guess is None:
+            p_rest_initial = np.ones(n_goods - 1)
+        else:
+            p_rest_initial = initial_guess.copy()
+            
+        # Construct initial price vector for agent filtering
+        initial_prices = np.concatenate([[1.0], p_rest_initial])
+        
+        # Filter viable agents using actual wealth calculation p·ω
+        viable_agents = self._filter_viable_agents(agents, initial_prices)
         if len(viable_agents) < 2:
             result = None, 0.0, 0.0, 'insufficient_viable_agents'
             if return_diagnostics:
                 diagnostics = ConvergenceResult(False, 'none', 0, np.inf, np.inf, 0.0, 'insufficient_viable_agents', [])
                 return (*result, diagnostics)
             return result
+            
+        # Setup excess demand function for rest goods
+        def excess_demand_rest(p_rest: np.ndarray) -> np.ndarray:
+            """Excess demand for goods 2,...,n with numéraire constraint."""
+            prices = np.concatenate([[1.0], p_rest])
+            try:
+                excess_demand = compute_excess_demand(prices, viable_agents)
+                return excess_demand[1:]  # Return only rest goods
+            except Exception as e:
+                logger.error(f"Excess demand computation failed: {e}")
+                return np.full(n_goods - 1, 1e6)  # Signal failure to optimizer
             
         # Setup excess demand function for rest goods
         def excess_demand_rest(p_rest: np.ndarray) -> np.ndarray:
@@ -138,6 +158,8 @@ class RobustEquilibriumSolver:
             )
             if success:
                 prices = np.concatenate([[1.0], p_rest_solution])
+                # Final safety projection to ensure price positivity
+                prices = self._project_to_positive_orthant(prices, preserve_numeraire=True)
                 convergence_time = time.time() - start_time
                 z_rest_norm, walras_dot = self._compute_convergence_metrics(prices, viable_agents)
                 
@@ -165,6 +187,8 @@ class RobustEquilibriumSolver:
             )
             if success:
                 prices = np.concatenate([[1.0], p_rest_solution])
+                # Final safety projection to ensure price positivity (Broyden already projects, but ensure consistency)
+                prices = self._project_to_positive_orthant(prices, preserve_numeraire=True)
                 convergence_time = time.time() - start_time
                 z_rest_norm, walras_dot = self._compute_convergence_metrics(prices, viable_agents)
                 
@@ -192,6 +216,8 @@ class RobustEquilibriumSolver:
             )
             if success:
                 prices = np.concatenate([[1.0], p_rest_solution])
+                # Final safety projection to ensure price positivity (tâtonnement already projects, but ensure consistency)
+                prices = self._project_to_positive_orthant(prices, preserve_numeraire=True)
                 convergence_time = time.time() - start_time
                 z_rest_norm, walras_dot = self._compute_convergence_metrics(prices, viable_agents)
                 
@@ -228,14 +254,51 @@ class RobustEquilibriumSolver:
             return prices, z_rest_norm, walras_dot, 'failed', diagnostics
         return prices, z_rest_norm, walras_dot, 'failed'
         
-    def _filter_viable_agents(self, agents: List) -> List:
-        """Filter agents with positive wealth for numerical stability."""
+    def _filter_viable_agents(self, agents: List, prices: np.ndarray) -> List:
+        """
+        Filter agents with positive wealth for numerical stability.
+        
+        Uses actual wealth calculation p·ω_total to avoid misclassifying agents
+        in heterogeneous-price economies.
+        
+        Args:
+            agents: List of agents to filter
+            prices: Current price vector for wealth calculation
+            
+        Returns:
+            List of agents with positive wealth
+        """
         viable_agents = []
         for agent in agents:
-            wealth = np.sum(agent.total_endowment)  # Using total endowment as proxy
+            omega_total = agent.home_endowment + agent.personal_endowment
+            wealth = float(np.dot(prices, omega_total))
             if wealth > FEASIBILITY_TOL:
                 viable_agents.append(agent)
+            else:
+                logger.debug(f"Agent {agent.agent_id} excluded with wealth {wealth:.2e}")
         return viable_agents
+        
+    def _project_to_positive_orthant(self, prices: np.ndarray, preserve_numeraire: bool = True) -> np.ndarray:
+        """
+        Project price vector to positive orthant with renormalization.
+        
+        Ensures all prices are at least FEASIBILITY_TOL and preserves
+        numéraire constraint if requested.
+        
+        Args:
+            prices: Price vector (full n-goods vector)
+            preserve_numeraire: Whether to keep p[0] = 1.0
+            
+        Returns:
+            Projected price vector with positive prices
+        """
+        projected = np.maximum(prices, FEASIBILITY_TOL)
+        
+        if preserve_numeraire:
+            # Renormalize to maintain numéraire constraint
+            projected[0] = 1.0
+            
+        return projected
         
     def _compute_analytical_jacobian(self, p_rest: np.ndarray, agents: List, n_goods: int) -> np.ndarray:
         """
@@ -303,10 +366,12 @@ class RobustEquilibriumSolver:
             # Newton step: p_new = p_old - J^{-1} * F(p_old)
             try:
                 delta = np.linalg.solve(jacobian, excess_demand)
-                p_rest = p_rest - delta
+                p_rest_candidate = p_rest - delta
                 
-                # Ensure positive prices
-                p_rest = np.maximum(p_rest, FEASIBILITY_TOL)
+                # Project to positive orthant with proper numéraire handling
+                full_prices_candidate = np.concatenate([[1.0], p_rest_candidate])
+                projected_prices = self._project_to_positive_orthant(full_prices_candidate, preserve_numeraire=True)
+                p_rest = projected_prices[1:]
                 
             except np.linalg.LinAlgError:
                 logger.warning("Jacobian singular in Newton-Raphson")
@@ -323,7 +388,15 @@ class RobustEquilibriumSolver:
                 method='broyden1',
                 options={'ftol': self.tolerance, 'maxiter': self.max_iterations}
             )
-            return result.x, result.nit, result.success
+            
+            # Project solution to positive orthant
+            if result.success:
+                full_prices = np.concatenate([[1.0], result.x])
+                projected_prices = self._project_to_positive_orthant(full_prices, preserve_numeraire=True)
+                projected_p_rest = projected_prices[1:]
+                return projected_p_rest, result.nit, result.success
+            else:
+                return result.x, result.nit, result.success
         except Exception:
             return initial_guess, 0, False
             
@@ -356,10 +429,19 @@ class RobustEquilibriumSolver:
             
             # Price adjustment: move in direction of excess demand
             p_rest = p_rest + step_size * np.sign(excess_demand)
-            p_rest = np.maximum(p_rest, FEASIBILITY_TOL)  # Ensure positive prices
+            
+            # Project to positive orthant
+            full_prices = np.concatenate([[1.0], p_rest])
+            projected_prices = self._project_to_positive_orthant(full_prices, preserve_numeraire=True)
+            p_rest = projected_prices[1:]
             
             last_residual = residual_norm
             
+        # Final projection for failed convergence
+        full_prices = np.concatenate([[1.0], p_rest])
+        projected_prices = self._project_to_positive_orthant(full_prices, preserve_numeraire=True)
+        p_rest = projected_prices[1:]
+        
         return p_rest, self.max_iterations, False
         
     def _compute_convergence_metrics(self, prices: np.ndarray, agents: List) -> Tuple[float, float]:

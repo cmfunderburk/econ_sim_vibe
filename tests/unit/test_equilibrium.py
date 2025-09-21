@@ -37,7 +37,12 @@ from econ.equilibrium import (
 )
 from core.agent import Agent
 
+# Import test categorization markers
+from tests.test_categorization import economic_core, robustness, real_functions
 
+
+@pytest.mark.economic_core
+@pytest.mark.real_functions
 class TestComputeExcessDemand:
     """Test the excess demand computation function."""
 
@@ -131,6 +136,8 @@ class TestComputeExcessDemand:
         assert np.allclose(excess_demand, expected_excess, atol=1e-10)
 
 
+@pytest.mark.economic_core
+@pytest.mark.real_functions
 class TestSolveWalrasianEquilibrium:
     """Test the main equilibrium solver function."""
 
@@ -253,6 +260,8 @@ class TestSolveWalrasianEquilibrium:
         assert np.allclose(prices1, prices2, atol=1e-8)
 
 
+@pytest.mark.economic_core
+@pytest.mark.real_functions
 class TestValidateEquilibriumInvariants:
     """Test the economic invariant validation function."""
 
@@ -302,6 +311,8 @@ class TestValidateEquilibriumInvariants:
         assert result is False
 
 
+@pytest.mark.economic_core
+@pytest.mark.real_functions
 class TestSolveEquilibriumInterface:
     """Test the high-level solve_equilibrium interface."""
 
@@ -339,6 +350,8 @@ class TestSolveEquilibriumInterface:
             solve_equilibrium([agent], endowment_scope="personal")
 
 
+@pytest.mark.economic_core
+@pytest.mark.real_functions
 class TestEconomicInvariants:
     """Test critical economic invariants that must always hold."""
 
@@ -445,6 +458,8 @@ class TestEconomicInvariants:
                 assert abs(prices[0] - 1.0) < 1e-12
 
 
+@pytest.mark.robustness
+@pytest.mark.real_functions
 class TestPerformanceAndScalability:
     """Test performance characteristics and scalability."""
 
@@ -489,6 +504,8 @@ class TestPerformanceAndScalability:
         assert z_rest_norm < SOLVER_TOL
 
 
+@pytest.mark.robustness
+@pytest.mark.real_functions
 class TestErrorHandlingAndRobustness:
     """Test error handling and robustness to edge cases."""
 

@@ -36,7 +36,12 @@ from econ.equilibrium import (
 )
 from core.agent import Agent
 
+# Import test categorization markers
+from tests.test_categorization import economic_core, real_functions
 
+
+@pytest.mark.economic_core
+@pytest.mark.real_functions
 class TestAnalyticalDemandValidation:
     """Test that demand functions match analytical Cobb-Douglas formulas exactly."""
 
@@ -185,6 +190,8 @@ class TestWalrasLawAnalyticalValidation:
         )
 
 
+@pytest.mark.economic_core
+@pytest.mark.real_functions
 class TestEquilibriumAnalyticalBenchmarks:
     """Test equilibrium solutions against known analytical benchmarks."""
 
@@ -233,6 +240,12 @@ class TestEquilibriumAnalyticalBenchmarks:
         expected_prices = np.array([1.0, 1.0])
         assert np.allclose(prices, expected_prices, atol=1e-8)
 
+
+@pytest.mark.robustness
+@pytest.mark.real_functions  
+class TestEquilibriumRobustness:
+    """Test equilibrium solver robustness under extreme conditions."""
+
     def test_corner_solution_handling(self):
         """Test equilibrium computation with extreme preferences (near corner solutions)."""
         # Agent 1 heavily prefers good 1, Agent 2 heavily prefers good 2
@@ -253,6 +266,8 @@ class TestEquilibriumAnalyticalBenchmarks:
             assert demand2[1] > demand2[0]
 
 
+@pytest.mark.economic_core
+@pytest.mark.real_functions
 class TestNumeraireConstraintValidation:
     """Test rigorous enforcement of numéraire constraint throughout solving."""
 

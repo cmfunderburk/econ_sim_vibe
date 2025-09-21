@@ -9,7 +9,7 @@ This module contains the fundamental building blocks for the economic simulation
 
 # Import core classes
 from .agent import Agent
-from .types import Trade, Position, SimulationState, MarketResult
+from .types import Trade, SimulationState, MarketResult
 
 # Export classes for easy import
-__all__ = ['Agent', 'Trade', 'Position', 'SimulationState', 'MarketResult']
+__all__ = ["Agent", "Trade", "SimulationState", "MarketResult"]

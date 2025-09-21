@@ -37,7 +37,12 @@ from src.econ.market import (
     FEASIBILITY_TOL,
 )
 
+# Import test categorization markers
+from tests.test_categorization import economic_core, robustness, real_functions
 
+
+@pytest.mark.economic_core
+@pytest.mark.real_functions
 class TestAgentOrder:
     """Test the AgentOrder dataclass validation."""
 
@@ -85,6 +90,8 @@ class TestAgentOrder:
             )
 
 
+@pytest.mark.economic_core
+@pytest.mark.real_functions
 class TestGenerateAgentOrders:
     """Test agent order generation from optimal demands."""
 
@@ -282,6 +289,8 @@ class TestProportionalRationing:
         assert executed_sells[2][0] == 0.0
 
 
+@pytest.mark.economic_core
+@pytest.mark.real_functions
 class TestClearingInvariantsValidation:
     """Test validation of economic invariants after clearing."""
 
@@ -460,29 +469,39 @@ class TestTradeConversion:
             assert abs(trade.quantity) > RATIONING_EPS
 
 
+@pytest.mark.economic_core
+@pytest.mark.real_functions
 class TestExecuteConstrainedClearing:
     """Test the main market clearing interface function."""
 
     def setup_method(self):
-        """Set up realistic test scenario with Cobb-Douglas agents."""
-        # Create agents with complementary preferences
+        """Set up realistic test scenario with Cobb-Douglas agents.
+        
+        Uses simplified inventory model: agents load full inventory before trading.
+        """
+        # Create agents with complementary preferences - total endowments [3, 1] and [1, 3]
         self.agent1 = Agent(
             agent_id=1,
             alpha=np.array([0.6, 0.4]),
-            home_endowment=np.array([2.0, 1.0]),
-            personal_endowment=np.array([1.0, 0.0]),
+            home_endowment=np.array([3.0, 1.0]),  # Total endowment [3, 1]
+            personal_endowment=np.array([0.0, 0.0]),
             position=(5, 5),
         )
 
         self.agent2 = Agent(
             agent_id=2,
             alpha=np.array([0.4, 0.6]),
-            home_endowment=np.array([1.0, 2.0]),
-            personal_endowment=np.array([0.0, 1.0]),
+            home_endowment=np.array([1.0, 3.0]),  # Total endowment [1, 3]  
+            personal_endowment=np.array([0.0, 0.0]),
             position=(5, 5),
         )
 
         self.agents = [self.agent1, self.agent2]
+        
+        # SIMPLIFIED INVENTORY MODEL: Load full inventory for trading
+        for agent in self.agents:
+            agent.load_inventory_for_travel()
+            
         self.prices = np.array([1.0, 1.0])
 
     def test_successful_clearing_execution(self):
@@ -628,6 +647,9 @@ class TestApplyTradesToAgents:
         apply_trades_to_agents(self.agents, [unknown_trade])
 
 
+@pytest.mark.economic_core
+@pytest.mark.integration
+@pytest.mark.real_functions
 class TestMarketClearingIntegration:
     """Integration tests combining equilibrium solving with market clearing."""
 

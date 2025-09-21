@@ -127,7 +127,8 @@ def _generate_agent_orders(agents: List, prices: np.ndarray) -> List[AgentOrder]
         # Current personal inventory (tradeable at marketplace)
         current_personal = agent.personal_endowment.copy()
 
-        # Wealth from TOTAL endowment as per SPECIFICATION.md
+        # Wealth from TOTAL endowment per SPECIFICATION.md
+        # This establishes theoretical clearing prices; execution still limited by personal inventory
         # Budget-constrained wealth: w_i = max(0, p·ω_i^total - κ·d_i)
         # For now, implementing without travel costs (κ·d_i = 0)
         total_wealth = np.dot(prices, agent.total_endowment)
@@ -135,7 +136,8 @@ def _generate_agent_orders(agents: List, prices: np.ndarray) -> List[AgentOrder]
         # TODO: Add travel cost deduction when spatial friction is implemented
         # adjusted_wealth = max(0.0, total_wealth - travel_cost)
         
-        # Compute optimal Cobb-Douglas demand using total wealth
+        # Compute optimal Cobb-Douglas demand using total wealth (theoretical)
+        # Execution will be constrained by personal inventory limits
         # x_j = α_j * wealth / p_j
         if total_wealth > FEASIBILITY_TOL:
             desired_quantities = agent.alpha * total_wealth / prices
@@ -155,6 +157,27 @@ def _generate_agent_orders(agents: List, prices: np.ndarray) -> List[AgentOrder]
 
         # Ensure sell orders don't exceed inventory
         sell_orders = np.minimum(sell_orders, max_sell_capacity)
+
+        # Budget constraint: p·buy ≤ p·sell (pure exchange constraint)
+        # With simplified inventory model, agents carry full inventory so this is enforceable
+        buy_value = np.dot(prices, buy_orders)
+        sell_value = np.dot(prices, sell_orders)
+        
+        if buy_value > sell_value + FEASIBILITY_TOL:
+            # Scale down buy orders to respect budget constraint
+            if sell_value > FEASIBILITY_TOL:
+                scaling_factor = sell_value / buy_value
+                buy_orders *= scaling_factor
+                logger.debug(
+                    f"Agent {agent.agent_id}: buy value {buy_value:.4f} > sell value {sell_value:.4f}, "
+                    f"scaled buy orders by factor {scaling_factor:.4f}"
+                )
+            else:
+                # Cannot buy anything if not selling anything of value
+                buy_orders = np.zeros_like(buy_orders)
+                logger.debug(
+                    f"Agent {agent.agent_id}: no sell value, clearing all buy orders"
+                )
 
         orders.append(
             AgentOrder(
@@ -268,6 +291,93 @@ def _execute_proportional_rationing(
                 )
 
     return executed_buys_dict, executed_sells_dict, executed_volumes
+
+
+def _compute_rationing_diagnostics(
+    orders: List[AgentOrder],
+    executed_buys_dict: Dict[int, np.ndarray],
+    executed_sells_dict: Dict[int, np.ndarray],
+    total_buys: np.ndarray,
+    total_sells: np.ndarray,
+) -> 'RationingDiagnostics':
+    """Compute detailed per-agent rationing diagnostics for carry-over analysis.
+    
+    This function analyzes the rationing outcomes to provide granular insights
+    into liquidity gaps, fill rates, and unmet demand/supply by agent and good.
+    
+    Args:
+        orders: Original agent orders before rationing
+        executed_buys_dict: Actual executed buy quantities by agent
+        executed_sells_dict: Actual executed sell quantities by agent  
+        total_buys: Total buy demand per good
+        total_sells: Total sell supply per good
+        
+    Returns:
+        RationingDiagnostics object with detailed per-agent analysis
+    """
+    if not orders:
+        # Empty market - return empty diagnostics
+        from src.core.types import RationingDiagnostics
+        return RationingDiagnostics(
+            agent_unmet_buys={},
+            agent_unmet_sells={}, 
+            agent_fill_rates_buy={},
+            agent_fill_rates_sell={},
+            good_demand_excess=np.array([]),
+            good_liquidity_gaps=np.array([])
+        )
+    
+    n_goods = len(orders[0].buy_orders)
+    
+    # Initialize per-agent diagnostics dictionaries
+    agent_unmet_buys = {}
+    agent_unmet_sells = {}  
+    agent_fill_rates_buy = {}
+    agent_fill_rates_sell = {}
+    
+    for order in orders:
+        agent_id = order.agent_id
+        
+        # Calculate unmet demand/supply per agent
+        executed_buys = executed_buys_dict[agent_id]
+        executed_sells = executed_sells_dict[agent_id]
+        
+        agent_unmet_buys[agent_id] = order.buy_orders - executed_buys
+        agent_unmet_sells[agent_id] = order.sell_orders - executed_sells
+        
+        # Calculate fill rates (0-1 scale)  
+        buy_fill_rates = np.zeros(n_goods)
+        sell_fill_rates = np.zeros(n_goods)
+        
+        for g in range(n_goods):
+            if order.buy_orders[g] > RATIONING_EPS:
+                buy_fill_rates[g] = executed_buys[g] / order.buy_orders[g]
+            else:
+                buy_fill_rates[g] = 1.0  # No demand = perfect fill
+                
+            if order.sell_orders[g] > RATIONING_EPS:
+                sell_fill_rates[g] = executed_sells[g] / order.sell_orders[g]  
+            else:
+                sell_fill_rates[g] = 1.0  # No supply = perfect fill
+        
+        agent_fill_rates_buy[agent_id] = buy_fill_rates
+        agent_fill_rates_sell[agent_id] = sell_fill_rates
+    
+    # Calculate good-level diagnostics
+    good_demand_excess = total_buys - total_sells
+    good_liquidity_gaps = np.maximum(0, good_demand_excess)  # Positive = shortage
+    
+    # Import here to avoid circular dependencies  
+    from src.core.types import RationingDiagnostics
+    
+    return RationingDiagnostics(
+        agent_unmet_buys=agent_unmet_buys,
+        agent_unmet_sells=agent_unmet_sells,
+        agent_fill_rates_buy=agent_fill_rates_buy, 
+        agent_fill_rates_sell=agent_fill_rates_sell,
+        good_demand_excess=good_demand_excess,
+        good_liquidity_gaps=good_liquidity_gaps
+    )
 
 
 def _validate_clearing_invariants(
@@ -484,7 +594,12 @@ def execute_constrained_clearing(
         orders, executed_buys_dict, executed_sells_dict, executed_volumes, prices
     )
 
-    # Step 5: Convert to trade objects
+    # Step 5: Compute rationing diagnostics for carry-over analysis
+    rationing_diagnostics = _compute_rationing_diagnostics(
+        orders, executed_buys_dict, executed_sells_dict, total_buys, total_sells
+    )
+
+    # Step 6: Convert to trade objects
     executed_trades = _convert_to_trades(
         executed_buys_dict, executed_sells_dict, prices
     )
@@ -500,6 +615,7 @@ def execute_constrained_clearing(
         total_volume=executed_volumes,
         prices=prices.copy(),
         participant_count=len(agents),
+        rationing_diagnostics=rationing_diagnostics,
     )
 
     logger.info(

@@ -1,0 +1,126 @@
+{
+  "config": {
+    "name": "Spatial Null Test",
+    "n_agents": 10,
+    "n_goods": 3,
+    "grid_size": [
+      10,
+      10
+    ],
+    "movement_cost": 0.0,
+    "random_seed": 42
+  },
+  "final_round": 8,
+  "rounds": [
+    {
+      "round": 1,
+      "n_marketplace_agents": 0,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "n_trades": 0
+    },
+    {
+      "round": 2,
+      "n_marketplace_agents": 1,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "n_trades": 0
+    },
+    {
+      "round": 3,
+      "n_marketplace_agents": 2,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        1.33540416179714,
+        7.5162292535752675
+      ],
+      "n_trades": 0
+    },
+    {
+      "round": 4,
+      "n_marketplace_agents": 3,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        0.9592972661403533,
+        5.108513053637686
+      ],
+      "n_trades": 0
+    },
+    {
+      "round": 5,
+      "n_marketplace_agents": 4,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        0.6038457471079985,
+        1.0488393163797758
+      ],
+      "n_trades": 0
+    },
+    {
+      "round": 6,
+      "n_marketplace_agents": 4,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        0.6038457471079985,
+        1.0488393163797758
+      ],
+      "n_trades": 0
+    },
+    {
+      "round": 7,
+      "n_marketplace_agents": 6,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        0.7605226742924087,
+        1.2802346899472679
+      ],
+      "n_trades": 0
+    },
+    {
+      "round": 8,
+      "n_marketplace_agents": 10,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        0.8166947491267922,
+        1.2108140298250258
+      ],
+      "n_trades": 0
+    }
+  ],
+  "final_prices": [
+    1.0,
+    0.8166947491267922,
+    1.2108140298250258
+  ],
+  "agents_in_marketplace": 10,
+  "total_agents": 10,
+  "grid_summary": {
+    "grid_size": [
+      10,
+      10
+    ],
+    "marketplace_bounds": [
+      4,
+      4,
+      2,
+      2
+    ],
+    "total_agents": 10,
+    "marketplace_agents": 10,
+    "agents_outside_marketplace": 0
+  }
+}

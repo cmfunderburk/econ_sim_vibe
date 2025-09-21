@@ -1,7 +1,7 @@
 """
 Economic Simulation Package
 
-A research-grade economic simulation platform for studying spatial frictions 
+A research-grade economic simulation platform for studying spatial frictions
 in market economies with agent-based modeling.
 """
 

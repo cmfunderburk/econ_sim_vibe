@@ -1,0 +1,234 @@
+{
+  "config": {
+    "name": "Spatial Null Test",
+    "n_agents": 10,
+    "n_goods": 3,
+    "grid_size": [
+      10,
+      10
+    ],
+    "movement_cost": 0.0,
+    "random_seed": 999
+  },
+  "final_round": 8,
+  "rounds": [
+    {
+      "round": 1,
+      "n_marketplace_agents": 0,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "n_trades": 0,
+      "cumulative_travel_costs": {
+        "0": 0.0,
+        "1": 0.0,
+        "2": 0.0,
+        "3": 0.0,
+        "4": 0.0,
+        "5": 0.0,
+        "6": 0.0,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0
+      }
+    },
+    {
+      "round": 2,
+      "n_marketplace_agents": 3,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        0.5028026981117517,
+        2.5498568722599657
+      ],
+      "n_trades": 6,
+      "cumulative_travel_costs": {
+        "0": 0.0,
+        "1": 0.0,
+        "2": 0.0,
+        "3": 0.0,
+        "4": 0.0,
+        "5": 0.0,
+        "6": 0.0,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0
+      }
+    },
+    {
+      "round": 3,
+      "n_marketplace_agents": 5,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        0.8068860851140793,
+        3.7020636963333153
+      ],
+      "n_trades": 10,
+      "cumulative_travel_costs": {
+        "0": 0.0,
+        "1": 0.0,
+        "2": 0.0,
+        "3": 0.0,
+        "4": 0.0,
+        "5": 0.0,
+        "6": 0.0,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0
+      }
+    },
+    {
+      "round": 4,
+      "n_marketplace_agents": 6,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        0.724309433896912,
+        2.4236968569159556
+      ],
+      "n_trades": 18,
+      "cumulative_travel_costs": {
+        "0": 0.0,
+        "1": 0.0,
+        "2": 0.0,
+        "3": 0.0,
+        "4": 0.0,
+        "5": 0.0,
+        "6": 0.0,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0
+      }
+    },
+    {
+      "round": 5,
+      "n_marketplace_agents": 7,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        0.7697294533484043,
+        1.7875975717798833
+      ],
+      "n_trades": 21,
+      "cumulative_travel_costs": {
+        "0": 0.0,
+        "1": 0.0,
+        "2": 0.0,
+        "3": 0.0,
+        "4": 0.0,
+        "5": 0.0,
+        "6": 0.0,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0
+      }
+    },
+    {
+      "round": 6,
+      "n_marketplace_agents": 7,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        0.7697294533484043,
+        1.7875975717798833
+      ],
+      "n_trades": 21,
+      "cumulative_travel_costs": {
+        "0": 0.0,
+        "1": 0.0,
+        "2": 0.0,
+        "3": 0.0,
+        "4": 0.0,
+        "5": 0.0,
+        "6": 0.0,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0
+      }
+    },
+    {
+      "round": 7,
+      "n_marketplace_agents": 8,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        0.7326605311748596,
+        1.5814909008072968
+      ],
+      "n_trades": 24,
+      "cumulative_travel_costs": {
+        "0": 0.0,
+        "1": 0.0,
+        "2": 0.0,
+        "3": 0.0,
+        "4": 0.0,
+        "5": 0.0,
+        "6": 0.0,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0
+      }
+    },
+    {
+      "round": 8,
+      "n_marketplace_agents": 10,
+      "total_agents": 10,
+      "prices": [
+        1.0,
+        0.7859043112194848,
+        1.0789065871485612
+      ],
+      "n_trades": 30,
+      "cumulative_travel_costs": {
+        "0": 0.0,
+        "1": 0.0,
+        "2": 0.0,
+        "3": 0.0,
+        "4": 0.0,
+        "5": 0.0,
+        "6": 0.0,
+        "7": 0.0,
+        "8": 0.0,
+        "9": 0.0
+      }
+    }
+  ],
+  "final_prices": [
+    1.0,
+    0.7859043112194848,
+    1.0789065871485612
+  ],
+  "agents_in_marketplace": 10,
+  "total_agents": 10,
+  "grid_summary": {
+    "grid_size": [
+      10,
+      10
+    ],
+    "marketplace_bounds": [
+      4,
+      4,
+      2,
+      2
+    ],
+    "total_agents": 10,
+    "marketplace_agents": 10,
+    "agents_outside_marketplace": 0
+  },
+  "final_travel_costs": {
+    "0": 0.0,
+    "1": 0.0,
+    "2": 0.0,
+    "3": 0.0,
+    "4": 0.0,
+    "5": 0.0,
+    "6": 0.0,
+    "7": 0.0,
+    "8": 0.0,
+    "9": 0.0
+  }
+}
