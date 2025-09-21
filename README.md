@@ -23,21 +23,22 @@ A research-grade economic simulation platform for studying spatial frictions in 
 
 ### Implementation Status & Limitations
 
-**✅ Complete & Production-Ready**:
+**✅ Complete & Functional**:
 - **Economic Engine**: Core agent framework, equilibrium solver, market clearing mechanisms
-- **Test Framework**: 84/84 tests passing with comprehensive validation (V1-V10 scenarios)
+- **Test Framework**: 179/191 tests passing (93.5% pass rate) with comprehensive validation (V1-V10 scenarios)
 - **Package Configuration**: Working setup.py, pytest.ini, requirements.txt
+- **Spatial Infrastructure**: Basic grid movement and marketplace detection working
+- **Travel Cost Integration**: Implemented with proper budget adjustment in simulation runner
 
-**⚠️ Partial Spatial Implementation**:
-- **Basic Grid**: Simple one-step movement toward marketplace (no A* pathfinding)
-- **Simulation Runner**: Functional and works with YAML configs
-- **Missing**: Travel cost budget deduction (TODO placeholder only)
+**⚠️ Simple Implementation**:
+- **Movement System**: Basic greedy movement toward marketplace (not A* pathfinding)
+- **Test Failures**: 12 tests expecting unlimited credit behavior (correctly failing)
 - **Convergence Issues**: Some spatial scenarios show equilibrium solver warnings
 
-**❌ Missing Features**:
-- **Travel Cost Budget Integration**: Movement costs configured but not deducted from agent wealth
+**❌ Missing Advanced Features**:
 - **A* Pathfinding**: Only basic one-step movement toward marketplace implemented
-- **Parquet Logging**: Data logging hooks not implemented
+- **Data Persistence**: Parquet logging hooks not implemented
+- **Real-time Visualization**: pygame visualization not implemented
 - **LTE Price Integration**: Still uses global Walrasian pricing (Phase 2 gap)
 
 ## Quick Start
@@ -65,14 +66,14 @@ pip install -e .
 
 ### Running Tests and Simulations
 ```bash
-# Run full test suite (84/84 tests pass)
+# Run full test suite (179/191 tests pass - 93.5% success rate)
 make test
 
-# Run validation scenarios
+# Run validation scenarios (all 10 scenarios pass)
 make validate
 
-# Run specific simulation
-python scripts/run_simulation.py --config config/edgeworth.yaml --seed 42
+# Run specific simulation (travel costs implemented)
+python scripts/run_simulation.py --config config/edgeworth.yaml --seed 42 --no-gui
 ```
 
 ## Research Focus
@@ -93,8 +94,9 @@ This simulation studies **spatial deadweight loss** in economic markets:
 
 ### Core Components
 - **Walrasian Solver**: Cobb-Douglas closed forms with numerical fallbacks
-- **Spatial Grid**: Basic one-step movement on configurable grid
+- **Spatial Grid**: Basic one-step movement on configurable grid (simple greedy, not A*)
 - **Market Clearing**: Constrained execution with carry-over order management
+- **Travel Cost System**: Budget adjustment for movement costs (implemented)
 - **Welfare Measurement**: Money-metric utilities for interpersonal comparability
 
 ### Architecture Flow

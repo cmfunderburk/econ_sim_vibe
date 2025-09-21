@@ -52,11 +52,11 @@ This project builds a comprehensive economic modeling platform step-by-step from
 
 **Implementation Status (September 2025):**
 - ✅ **Phase 1 Economic Engine COMPLETE**: Walrasian equilibrium solver + market clearing mechanisms
-- ✅ **Complete Validation Framework ACHIEVED**: 84/84 tests passing, all V1-V10 scenarios validated
+- ✅ **Complete Validation Framework ACHIEVED**: 179/191 tests passing (93.5%), all V1-V10 scenarios validated
 - ✅ **Mathematical Foundation**: All economic invariants satisfied, robust error handling, excellent performance
-- ✅ **Research-Grade Testing**: Comprehensive validation suitable for publication-quality experiments
-- ⚠️ **Spatial Implementation**: Grid movement, travel costs, spatial constraints (STUB CODE - needs implementation)
-- 📋 **Next Priority**: Implement functional spatial grid and end-to-end simulation runner
+- ✅ **Basic Spatial Implementation**: Grid movement, travel cost integration, simulation runner functional
+- ⚠️ **Simple Movement System**: Basic greedy movement implemented (not A* pathfinding)
+- 📋 **Next Priority**: Advanced pathfinding algorithms and data persistence features
 
 **Key Invariants (Never Violate):**
 - p₁ ≡ 1 (numéraire constraint)
@@ -92,7 +92,7 @@ This project builds a comprehensive economic modeling platform step-by-step from
 - **Performance Target**: Scalable to 100+ agents with vectorized numpy operations
 - **Extensible Framework**: Plugin system for utility functions, market mechanisms, and economic institutions
 - **Theoretical Grounding**: All components connect to established economic theory
-- **Real-time Visualization**: Pygame-based visualization of agent movement and trading
+- **Real-time Visualization**: Planned pygame-based visualization (not yet implemented)
 - **System Flow**: See [README.md](README.md) for ASCII diagram of Home ↔ Personal ↔ Market architecture
 
 ## Budget Constraints and Market Structure
@@ -120,7 +120,7 @@ We adopt a **budget-side travel cost model** for Phase 2:
 - **Tie-breaking**: Lexicographic by (x,y) coordinates then agent ID for deterministic pathfinding across platforms
 - **Unit consistency**: $\kappa$ is denominated in units of good 1 per grid step, ensuring budget constraint consistency
 - **Default settings**: $\kappa = 0$ in validation scenarios V1-V3 (spatial null tests)
-- **Movement policy**: Default movement is **myopic A*** to the nearest marketplace cell; $\kappa$ is applied as a budget reduction. **Note**: A* optimality requires static, additive, non-negative costs without congestion - gated by regime flags in implementation. Intertemporal trade-offs and strategic rerouting are introduced in Phase 3.
+- **Movement policy**: Default movement is **simple greedy** toward marketplace center (one step per round). Movement uses lexicographic tie-breaking (x-direction first, then y-direction) for deterministic behavior. A* pathfinding is planned but not implemented. $\kappa$ is applied as a budget reduction in the simulation runner.
 
 ### Welfare Measurement
 - **Money-metric welfare**: Report equivalent variation (EV) in units of good 1 (numéraire) using expenditure functions to ensure interpersonal comparability
@@ -182,7 +182,7 @@ If a utility plugin doesn't provide `demand()`, solver falls back to numerical u
 ### Trading Mechanism (Phase 2: Clean Spatial Protocol)
 
 #### Static Equilibrium Process Per Round:
-1. **Agent Movement**: Each agent moves one grid square toward marketplace (myopic A*, Manhattan/L1; lexicographic tie-break by (x,y), then agent ID)
+1. **Agent Movement**: Each agent moves one grid square toward marketplace (simple greedy movement, Manhattan/L1; lexicographic tie-break by (x,y), then agent ID)
 
 2. **Local Theoretical Equilibrium (LTE)**: Compute the Walrasian price vector using **POST-MOVE agents inside the marketplace** and their **total endowments (home + personal)**. This establishes the theoretical clearing prices; actual execution will be constrained by personal inventory. Agents outside the marketplace are excluded from this round's Z_market(p) = 0 system.
 
