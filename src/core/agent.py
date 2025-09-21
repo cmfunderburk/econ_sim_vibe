@@ -256,6 +256,21 @@ class Agent:
         x_market, y_market = marketplace_center
         return abs(x_agent - x_market) + abs(y_agent - y_market)
     
+    def copy(self) -> 'Agent':
+        """
+        Create a deep copy of this agent.
+        
+        Returns:
+            New Agent instance with identical state
+        """
+        return Agent(
+            agent_id=self.agent_id,
+            alpha=self.alpha.copy(),
+            home_endowment=self.home_endowment.copy(),
+            personal_endowment=self.personal_endowment.copy(),
+            position=self.position
+        )
+    
     def __repr__(self) -> str:
         """String representation for debugging."""
         return (f"Agent(id={self.agent_id}, α={self.alpha}, "

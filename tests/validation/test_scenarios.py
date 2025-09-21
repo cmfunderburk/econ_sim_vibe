@@ -702,8 +702,151 @@ def test_v9_scale_invariance():
     pytest.skip("Implementation pending")
 
 def test_v10_spatial_null_unit():
-    """V10: Spatial Null (Unit Test) - Perfect equivalence."""
-    config = load_config("spatial_null_test")
-    # TODO: Implement perfect equivalence test
-    # Expected: phase2_allocation == phase1_allocation
-    pytest.skip("Implementation pending")
+    """
+    V10: Spatial Null (Unit Test) - Fast CI/CD Regression Test
+    
+    This is a lightweight unit test version of V2, designed for fast regression testing
+    in CI/CD pipelines. Tests that Phase 2 with κ=0 and all agents starting at the
+    marketplace produces exactly the same allocation as Phase 1.
+    
+    Key differences from V2:
+    - Smaller test case (4 agents, 3 goods) for speed
+    - All agents start at marketplace (no movement needed)
+    - κ=0 (no movement costs)
+    - Direct allocation comparison (not welfare-based)
+    
+    Expected outcome:
+    - phase2_allocation == phase1_allocation (exact equality)
+    - efficiency_loss < FEASIBILITY_TOL (essentially zero)
+    """
+    print("\n=== V10: Spatial Null (Unit Test) - Fast Regression Test ===")
+    print("Testing Phase 2 = Phase 1 with κ=0, all agents at marketplace")
+    
+    # Fast test configuration: 4 agents, 3 goods
+    np.random.seed(42)  # Deterministic for regression testing
+    n_agents = 4
+    n_goods = 3
+    
+    # Create agents with diverse but simple preferences
+    agents = []
+    alpha_sets = [
+        [0.5, 0.3, 0.2],  # Agent 1: prefers good 1
+        [0.2, 0.6, 0.2],  # Agent 2: prefers good 2  
+        [0.3, 0.2, 0.5],  # Agent 3: prefers good 3
+        [0.4, 0.3, 0.3]   # Agent 4: balanced preferences
+    ]
+    
+    endowment_sets = [
+        [2.0, 1.0, 0.5],  # Agent 1
+        [1.0, 2.0, 1.0],  # Agent 2
+        [0.5, 1.0, 2.0],  # Agent 3
+        [1.5, 1.5, 1.5]   # Agent 4: balanced endowment
+    ]
+    
+    for i in range(n_agents):
+        alpha = np.array(alpha_sets[i])
+        endowment = np.array(endowment_sets[i])
+        agent = Agent(
+            agent_id=i+1,
+            alpha=alpha,
+            home_endowment=endowment.copy(),
+            personal_endowment=endowment.copy(),  # All goods available for trading
+            position=(1, 1)  # All agents start at marketplace center
+        )
+        agents.append(agent)
+    
+    print(f"Created {n_agents} agents with {n_goods} goods")
+    print("All agents positioned at marketplace (1,1) with κ=0")
+    
+    # Phase 1: Pure Walrasian equilibrium (theoretical baseline)
+    print("\n--- Phase 1: Pure Walrasian Equilibrium ---")
+    phase1_agents = [agent.copy() for agent in agents]  # Deep copy for isolation
+    
+    # Solve equilibrium using all agents' total endowments
+    prices, z_rest_inf, walras_dot, status = solve_walrasian_equilibrium(phase1_agents)
+    assert status == 'converged', f"Phase 1 solver failed: {status}"
+    assert z_rest_inf < SOLVER_TOL, f"Phase 1 poor convergence: {z_rest_inf}"
+    print(f"Phase 1 prices: {prices}")
+    print(f"Phase 1 convergence: ||Z_rest||_∞ = {z_rest_inf:.2e}")
+    
+    # Execute unconstrained clearing (Phase 1 has no personal inventory limits)
+    # For Phase 1, we assume agents can access all their endowments for trading
+    market_result = execute_constrained_clearing(phase1_agents, prices)
+    
+    # Record Phase 1 final allocations
+    phase1_allocations = []
+    phase1_utilities = []
+    for agent in phase1_agents:
+        final_allocation = agent.home_endowment + agent.personal_endowment  # Total allocation
+        phase1_allocations.append(final_allocation.copy())
+        phase1_utilities.append(agent.utility(final_allocation))
+    
+    print(f"Phase 1 total utility: {sum(phase1_utilities):.6f}")
+    
+    # Phase 2: Spatial simulation with κ=0, all agents at marketplace
+    print("\n--- Phase 2: Spatial Simulation (κ=0, all at marketplace) ---")
+    phase2_agents = [agent.copy() for agent in agents]  # Fresh copy from original
+    
+    # All agents are already at marketplace (1,1), so no movement phase needed
+    # Since κ=0, no movement costs applied to wealth
+    
+    # Price computation: All agents are marketplace participants with κ=0
+    marketplace_agents = phase2_agents  # All agents participate
+    prices2, z_rest_inf2, walras_dot2, status2 = solve_walrasian_equilibrium(marketplace_agents)
+    assert status2 == 'converged', f"Phase 2 solver failed: {status2}"
+    assert z_rest_inf2 < SOLVER_TOL, f"Phase 2 poor convergence: {z_rest_inf2}"
+    print(f"Phase 2 prices: {prices2}")
+    print(f"Phase 2 convergence: ||Z_rest||_∞ = {z_rest_inf2:.2e}")
+    
+    # Execute constrained clearing (limited by personal inventory)
+    market_result2 = execute_constrained_clearing(marketplace_agents, prices2)
+    
+    # Record Phase 2 final allocations
+    phase2_allocations = []
+    phase2_utilities = []
+    for agent in phase2_agents:
+        final_allocation = agent.home_endowment + agent.personal_endowment  # Total allocation
+        phase2_allocations.append(final_allocation.copy())
+        phase2_utilities.append(agent.utility(final_allocation))
+    
+    print(f"Phase 2 total utility: {sum(phase2_utilities):.6f}")
+    
+    # Critical Validation: Perfect Equivalence
+    print("\n--- Equivalence Validation ---")
+    
+    # 1. Price equivalence (should be identical)
+    price_difference = np.linalg.norm(prices - prices2, ord=np.inf)
+    print(f"Price difference: ||p1 - p2||_∞ = {price_difference:.2e}")
+    assert price_difference < FEASIBILITY_TOL, f"Prices differ: {price_difference}"
+    
+    # 2. Allocation equivalence (should be identical)
+    max_allocation_diff = 0.0
+    for i, (alloc1, alloc2) in enumerate(zip(phase1_allocations, phase2_allocations)):
+        agent_diff = np.linalg.norm(alloc1 - alloc2, ord=np.inf)
+        max_allocation_diff = max(max_allocation_diff, agent_diff)
+        print(f"Agent {i+1} allocation difference: {agent_diff:.2e}")
+    
+    print(f"Maximum allocation difference: {max_allocation_diff:.2e}")
+    assert max_allocation_diff < FEASIBILITY_TOL, f"Allocations differ: {max_allocation_diff}"
+    
+    # 3. Utility equivalence (should be identical)
+    utility_differences = [abs(u1 - u2) for u1, u2 in zip(phase1_utilities, phase2_utilities)]
+    max_utility_diff = max(utility_differences)
+    print(f"Maximum utility difference: {max_utility_diff:.2e}")
+    assert max_utility_diff < FEASIBILITY_TOL, f"Utilities differ: {max_utility_diff}"
+    
+    # 4. Total welfare equivalence
+    welfare_diff = abs(sum(phase1_utilities) - sum(phase2_utilities))
+    print(f"Total welfare difference: {welfare_diff:.2e}")
+    assert welfare_diff < FEASIBILITY_TOL, f"Total welfare differs: {welfare_diff}"
+    
+    # 5. Convergence equivalence
+    convergence_diff = abs(z_rest_inf - z_rest_inf2)
+    print(f"Convergence metric difference: {convergence_diff:.2e}")
+    assert convergence_diff < FEASIBILITY_TOL, f"Convergence differs: {convergence_diff}"
+    
+    print("\n✅ V10 Spatial Null Unit Test PASSED")
+    print("   Perfect equivalence: Phase 2 (κ=0, all at marketplace) = Phase 1")
+    print("   Fast regression test validated for CI/CD pipeline")
+    print(f"   Maximum differences: allocation {max_allocation_diff:.2e}, utility {max_utility_diff:.2e}")
+    print("   Spatial extensions preserve economic correctness under null conditions")

@@ -33,8 +33,12 @@ from dataclasses import dataclass
 try:
     from src.core.types import Trade, MarketResult
 except ImportError:
-    # For testing context, try relative import
-    from ..core.types import Trade, MarketResult
+    try:
+        # For testing context, try relative import
+        from ..core.types import Trade, MarketResult
+    except ImportError:
+        # For standalone execution, try direct import
+        from core.types import Trade, MarketResult
 
 # Import agent after types to avoid circular imports
 # from ..core.agent import Agent
