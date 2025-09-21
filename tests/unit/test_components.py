@@ -270,15 +270,20 @@ class TestTradeDataclass:
             agent_id=1,
             good_id=0,
             quantity=2.5,
-            price=1.2,
-            round=5
+            price=1.2
         )
         
         assert trade.agent_id == 1
         assert trade.good_id == 0
         assert trade.quantity == 2.5
         assert trade.price == 1.2
-        assert trade.round == 5
+        
+        # Test value calculation
+        assert trade.value == 2.5 * 1.2
+        
+        # Test immutability (frozen dataclass) - should raise FrozenInstanceError
+        with pytest.raises(Exception):  # Frozen dataclass raises FrozenInstanceError
+            trade.quantity = 3.0
 
 
 class TestSimulationState:
@@ -286,32 +291,52 @@ class TestSimulationState:
     
     def test_simulation_state_creation(self):
         """Test SimulationState dataclass creation."""
-        trades = [Trade(1, 0, 2.5, 1.2, 1)]
+        from src.core.agent import Agent
+        
+        # Create mock agents
+        agents = [
+            Agent(agent_id=1,
+                  alpha=np.array([0.6, 0.4]), 
+                  home_endowment=np.array([1.0, 0.0]),
+                  personal_endowment=np.array([0.5, 0.5]),
+                  position=(0, 0)),
+            Agent(agent_id=2,
+                  alpha=np.array([0.3, 0.7]), 
+                  home_endowment=np.array([0.0, 1.0]),
+                  personal_endowment=np.array([0.5, 0.5]),
+                  position=(1, 1))
+        ]
+        
+        trades = [Trade(1, 0, 2.5, 1.2)]
         prices = np.array([1.0, 0.8, 1.1])
-        agent_positions = {1: (0, 0), 2: (1, 1)}
-        marketplace_participants = {1}
         
         state = SimulationState(
-            round=1,
+            round_number=1,
+            agents=agents,
             prices=prices,
-            trades=trades,
-            agent_positions=agent_positions,
-            marketplace_participants=marketplace_participants
+            executed_trades=trades,
+            z_rest_norm=1e-9,
+            walras_dot=1e-10,
+            total_welfare=2.5,
+            marketplace_participants=2
         )
         
-        assert state.round == 1
-        assert np.allclose(state.prices, prices)
-        assert state.trades == trades
-        assert state.agent_positions == agent_positions
-        assert state.marketplace_participants == marketplace_participants
+        assert state.round_number == 1
+        assert len(state.agents) == 2
+        assert np.array_equal(state.prices, prices)
+        assert state.executed_trades == trades
+        assert state.marketplace_participants == 2
         
         # Test with None prices (no trading round)
         state_no_prices = SimulationState(
-            round=2,
+            round_number=2,
+            agents=agents,
             prices=None,
-            trades=[],
-            agent_positions=agent_positions,
-            marketplace_participants=set()
+            executed_trades=[],
+            z_rest_norm=0.0,
+            walras_dot=0.0,
+            total_welfare=1.0,
+            marketplace_participants=0
         )
         
         assert state_no_prices.prices is None

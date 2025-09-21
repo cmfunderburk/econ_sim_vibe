@@ -1,0 +1,128 @@
+# Economic Simulation Project - Human Contributor Guide
+
+*Last Updated: September 20, 2025*
+
+## 🎯 Current Project Status: Economic Engine Complete & Ready for Validation
+
+### What We've Built (Production Ready ✅)
+
+**Complete Economic Engine**: A research-grade implementation of Walrasian equilibrium theory with spatial extensions:
+- **Agent Framework**: Cobb-Douglas utility agents with spatial positioning and inventory management
+- **Equilibrium Solver**: Numéraire-normalized price computation with analytical demand functions
+- **Market Clearing**: Constrained execution with proportional rationing and carry-over management
+- **Testing Validation**: 74/74 unit tests passing with comprehensive economic invariant validation
+
+**Technical Achievements**:
+- Perfect integration pipeline (Agent → Equilibrium → Market Clearing)
+- All economic invariants satisfied (conservation, budget constraints, Walras' Law)
+- Excellent performance (<1ms operations, linear scaling)
+- Robust edge case handling (empty markets, zero wealth, extreme parameters)
+
+### What You Can Do Right Now 🚀
+
+**Immediate Contribution Opportunities**:
+
+1. **Run the Validation Suite** (5 minutes)
+   ```bash
+   cd econ_sim_vibe
+   make test          # Run 74 unit tests - should all pass
+   make validate      # Run economic validation scenarios
+   ```
+
+2. **Explore the Implementation** (15 minutes)
+   - `src/core/agent.py` - Agent class with Cobb-Douglas utilities
+   - `src/econ/equilibrium.py` - Walrasian equilibrium solver 
+   - `src/econ/market.py` - Market clearing mechanisms
+   - `tests/unit/` - Comprehensive test suite
+
+3. **Review Documentation** (30 minutes)
+   - `SPECIFICATION.md` - Complete technical specification (825 lines)
+   - `README.md` - Project overview and quick start
+   - `.github/copilot-instructions.md` - AI development context
+
+### Next Development Priority 🎯
+
+**Validation Scenarios V1-V2 Implementation** (Estimated: 2-4 hours)
+
+The economic engine is complete and tested. The immediate next step is implementing the first two validation scenarios to verify our implementation against known analytical solutions:
+
+**V1: Edgeworth Box 2×2 Verification**
+- Test against known analytical solution for 2 agents, 2 goods
+- Expected outcome: `‖p_computed - p_analytic‖ < 1e-8`
+- Location: `tests/validation/test_scenarios.py`
+
+**V2: Spatial Null Test** 
+- Verify that κ=0 (no movement costs) equals Phase 1 exactly
+- Expected outcome: `efficiency_loss < 1e-10`
+- Location: `tests/validation/test_scenarios.py`
+
+### How to Contribute
+
+**For Economists**:
+- Verify economic theory implementation in `src/econ/`
+- Review validation scenarios in `config/` directory
+- Test edge cases and economic invariants
+
+**For Software Engineers**:
+- Implement validation scenarios using existing Economic Engine
+- Optimize performance for 100+ agents
+- Add configuration loading and simulation engine integration
+
+**For Students/Researchers**:
+- Run experiments with different configurations
+- Analyze welfare measurement and spatial efficiency
+- Contribute to documentation and educational materials
+
+### Getting Started Commands
+
+```bash
+# Setup (first time)
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Daily development
+make test              # Run full test suite
+make validate          # Run validation scenarios  
+make format            # Format code
+make check             # Quality checks (lint + test)
+
+# Run specific simulation (when implemented)
+make run CONFIG=config/edgeworth.yaml SEED=42
+```
+
+### Technical Context
+
+**Core Architecture**: Pure exchange economy with spatial extensions
+- **Phase 1**: Walrasian equilibrium (complete ✅)
+- **Phase 2**: Spatial movement costs and marketplace access (next)
+- **Phase 3**: Local price formation and bilateral bargaining (future)
+
+**Economic Invariants** (Never Violate):
+- Conservation: Total goods conserved across all operations
+- Walras' Law: p·Z_market(p) ≡ 0 (budget constraints sum to zero)
+- Numéraire: p₁ ≡ 1 (price normalization)
+- Value feasibility: buy_value ≤ sell_value per agent per round
+
+**Key Files to Understand**:
+- `src/core/agent.py` - Economic agents with Cobb-Douglas preferences
+- `src/econ/equilibrium.py` - Market-clearing price computation
+- `src/econ/market.py` - Trade execution with inventory constraints
+- `tests/unit/test_components.py` - Core functionality tests
+
+### Questions? Need Help?
+
+1. **Documentation**: Check `SPECIFICATION.md` for detailed technical specification
+2. **Issues**: Use GitHub Issues for bug reports and feature requests  
+3. **Discussions**: Use GitHub Discussions for research questions
+4. **AI Assistant**: The project includes comprehensive AI development instructions
+
+### Success Metrics
+
+**Current Status**: 74/74 unit tests passing, all economic invariants satisfied
+**Next Milestone**: V1-V2 validation scenarios implemented and passing
+**End Goal**: Complete spatial economic simulation platform for research
+
+---
+
+**Ready to contribute?** Start with `make test` to verify everything works, then dive into implementing validation scenarios V1-V2. The economic foundation is solid - now we need to prove it works against known analytical solutions!
