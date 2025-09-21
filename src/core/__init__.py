@@ -12,7 +12,8 @@ from dataclasses import dataclass
 from typing import Optional, List, Dict, Tuple, Set
 import numpy as np
 
-# TODO: Implement these core classes as specified in SPECIFICATION.md
+# Import core classes
+from .agent import Agent
 
 @dataclass
 class Trade:
@@ -50,6 +51,5 @@ class SimulationState:
     agent_positions: Dict[int, Tuple[int, int]]
     marketplace_participants: Set[int]
 
-# TODO: Implement Agent class with Cobb-Douglas preferences
-# TODO: Implement utility calculation functions
-# TODO: Implement state management utilities
+# Export classes for easy import
+__all__ = ['Agent', 'Trade', 'SimulationState']

@@ -644,7 +644,7 @@ def test_movement_regime_optimality():
 
 ## Implementation Examples
 
-The following code sketches are for illustration only. Module stubs have been created in `src/` with TODO markers indicating implementation priorities:
+The following code sketches are for illustration only. The Agent class has been implemented in `src/core/agent.py` with comprehensive testing. Remaining modules need implementation as indicated by the Implementation Priorities:
 
 from typing import Tuple, Optional, List
 import numpy as np
@@ -786,7 +786,9 @@ def test_constrained_clearing_invariants(simulation_log):
 
 ## Implementation Readiness Checklist
 
-Before starting Phase 1 implementation:
+With the Agent framework complete, before implementing the economic engine:
+- [x] ✅ Agent class with Cobb-Douglas utilities (COMPLETED)
+- [x] ✅ Comprehensive testing suite with 15 unit tests (COMPLETED)
 - [ ] Understand numéraire normalization (p₁ ≡ 1)
 - [ ] Know primary convergence test (rest-goods norm ||Z(p)_{2:n}||_∞ < 1e-8)
 - [ ] Grasp local-participants pricing principle (POST-MOVE marketplace agents only)
