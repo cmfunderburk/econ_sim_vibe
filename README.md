@@ -4,6 +4,51 @@ A research-grade economic simulation platform for studying spatial frictions in 
 
 *Forked from the original econ_sim_base project.*
 
+## 🚀 Quick Start for Contributors
+
+### Ready to Contribute? (5 minutes to get started)
+
+**Current Status**: Economic Engine complete with 74/74 unit tests passing. **Next Priority**: Validation scenarios V1-V2.
+
+```bash
+# Setup
+git clone https://github.com/cmfunderburk/econ_sim_vibe.git
+cd econ_sim_vibe
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
+
+# Verify everything works
+make test          # Should show: 74 tests passing (100% success rate)
+make validate      # Run economic validation scenarios
+```
+
+### Immediate Contribution Opportunities
+
+**🎯 Priority: Implement Validation Scenarios V1-V2** (2-4 hours, using completed Economic Engine)
+- **V1: Edgeworth Box 2×2**: Test against analytical solution (`‖p_computed - p_analytic‖ < 1e-8`)
+- **V2: Spatial Null Test**: Verify κ=0 equals Phase 1 exactly (`efficiency_loss < 1e-10`)
+- **Location**: `tests/validation/test_scenarios.py`
+
+**For Different Contributors**:
+- **Economists**: Verify theory in `src/econ/`, review validation scenarios in `config/`
+- **Software Engineers**: Implement validation using existing Economic Engine, optimize for 100+ agents
+- **Students/Researchers**: Run experiments, analyze welfare measurement, contribute documentation
+
+### What's Already Built (Production Ready ✅)
+
+- **Complete Agent Framework**: Cobb-Douglas utility agents with spatial positioning
+- **Walrasian Equilibrium Solver**: Numéraire-normalized price computation 
+- **Market Clearing Engine**: Constrained execution with proportional rationing
+- **Comprehensive Testing**: All economic invariants validated, robust edge case handling
+- **Perfect Integration**: Agent → Equilibrium → Market Clearing pipeline (1.000 efficiency)
+
+**Key Files to Explore**:
+- `src/core/agent.py` - Economic agents with Cobb-Douglas preferences  
+- `src/econ/equilibrium.py` - Market-clearing price computation
+- `src/econ/market.py` - Trade execution with inventory constraints
+- `SPECIFICATION.md` - Complete technical specification (825 lines)
+
 ## Project Status: Economic Engine Complete & Comprehensively Tested ✅
 
 The project has successfully completed the **Economic Engine** implementation with comprehensive testing validation, achieving production-ready status for Phase 1 economic simulations.
@@ -56,6 +101,18 @@ The project has successfully completed the **Economic Engine** implementation wi
    - Spatial grid and movement implementation (`src/spatial/`)
    - Configuration loading and simulation engine integration
    - Advanced economic validation and analysis tools
+
+### Success Metrics & Validation Targets
+
+**Current Status**: 74/74 unit tests passing, all economic invariants satisfied
+**Next Milestone**: V1-V2 validation scenarios implemented and passing
+**End Goal**: Complete spatial economic simulation platform for research
+
+**Key Validation Criteria**:
+- **V1 (Edgeworth 2×2)**: `‖p_computed - p_analytic‖ < 1e-8`
+- **V2 (Spatial Null)**: `efficiency_loss < 1e-10` when κ=0
+- **Economic Invariants**: Conservation, Walras' Law, budget constraints always satisfied
+- **Performance**: <30 seconds per 1000 rounds with 100+ agents (target)
 
 ## Quick Start
 
@@ -236,16 +293,32 @@ This project follows research-grade development practices:
 
 See [SPECIFICATION.md](SPECIFICATION.md) for detailed implementation guidelines and economic invariants.
 
+## Questions? Need Help?
+
+**For New Contributors**:
+1. **Start Here**: Run `make test` to verify everything works (should show 74/74 tests passing)
+2. **Explore**: Check `src/core/agent.py`, `src/econ/equilibrium.py`, `src/econ/market.py`
+3. **Next Step**: Implement validation scenarios V1-V2 in `tests/validation/test_scenarios.py`
+
+**Documentation & Support**:
+- **[Human Summary](copilot_summaries/Human%20Summary)** - Quick contributor orientation guide
+- **[SPECIFICATION.md](SPECIFICATION.md)** - Complete technical specification (825 lines)
+- **Issues**: Use GitHub Issues for bug reports and feature requests  
+- **Discussions**: Use GitHub Discussions for research questions and collaboration
+- **AI Assistant**: Project includes comprehensive AI development instructions
+
+**Development Commands**:
+```bash
+make test              # Run full test suite (74/74 should pass)
+make validate          # Run validation scenarios  
+make format            # Format code
+make check             # Quality checks (lint + test)
+```
+
 ## License
 
 MIT License - See LICENSE file for details.
 
-## Contact
-
-For questions, suggestions, or collaboration:
-- **Issues**: Please use GitHub Issues for bug reports and feature requests
-- **Discussions**: Use GitHub Discussions for general questions and research collaboration
-
 ---
 
-**Status**: Agent framework complete with comprehensive testing validation. Next milestone: Economic engine (Walrasian equilibrium solver) with validation scenarios V1-V2.
+**Ready to contribute?** Start with `make test`, explore the economic engine implementation, then dive into validation scenarios V1-V2. The foundation is solid - now we need to prove it works against known analytical solutions! 🚀
