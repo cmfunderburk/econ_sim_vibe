@@ -11,58 +11,43 @@ import argparse
 import sys
 import random
 import json
-from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any, Optional
 from dataclasses import dataclass
 import yaml
 import numpy as np
 
-# Import our implemented modules
-sys.path.append(str(Path(__file__).parent.parent))
-from src.core.agent import Agent
-from src.econ.equilibrium import solve_walrasian_equilibrium
-from src.econ.market import execute_constrained_clearing
-from src.spatial.grid import Grid, Position, create_random_positions
+# Temporary path hack retained until packaging task (see architectural plan)
+sys.path.append(str(Path(__file__).parent.parent))  # TODO: remove after console_scripts
+
+from src.core.simulation import (
+    SimulationConfig,
+    RuntimeSimulationState,
+    initialize_runtime_state,
+    run_round,
+    AgentPhase,
+)
+from src.visualization import build_frame, ASCIIRenderer  # type: ignore
+try:  # Optional pygame renderer import
+    from src.visualization import PygameRenderer  # type: ignore
+except Exception:  # pragma: no cover
+    PygameRenderer = None  # type: ignore
+from src.core.config_validation import validate_simulation_config
+from src.core.agent import Agent  # re-used for type hints
+
+# Logging layer (optional)
+try:
+    from src.logging.run_logger import RunLogger, RoundLogRecord, SCHEMA_VERSION
+except ImportError:  # pragma: no cover - logging module optional
+    RunLogger = None  # type: ignore
+    RoundLogRecord = None  # type: ignore
+    SCHEMA_VERSION = "0.0.0"  # type: ignore
 
 
-class AgentPhase(str, Enum):
-    """Lifecycle phases for agent movement between home and marketplace."""
-
-    HOME_PREP = "home_prep"
-    TO_MARKET = "to_market"
-    AT_MARKET = "at_market"
-    TO_HOME = "to_home"
-
-
-@dataclass
-class SimulationConfig:
-    """Configuration for simulation run."""
-
-    name: str
-    n_agents: int
-    n_goods: int
-    grid_width: int
-    grid_height: int
-    marketplace_width: int
-    marketplace_height: int
-    movement_cost: float
-    max_rounds: int
-    random_seed: int
-
-
-@dataclass
-class SimulationState:
-    """Current state of simulation."""
-
-    round: int
-    agents: List[Agent]
-    grid: Grid
-    prices: np.ndarray
-    trades: List[Any]
-    # Track cumulative travel costs for each agent
-    agent_travel_costs: Dict[int, float]  # agent_id -> cumulative travel cost
-    agent_phases: Dict[int, AgentPhase]
+#############################
+# Legacy Dataclasses Removed #
+#############################
+# Local SimulationState & AgentPhase definitions replaced by runtime module.
 
 
 def load_config(config_path: Path) -> SimulationConfig:
@@ -74,7 +59,7 @@ def load_config(config_path: Path) -> SimulationConfig:
     agents_config = config_data.get("agents", {})
     economy_config = config_data.get("economy", {})
 
-    return SimulationConfig(
+    config = SimulationConfig(
         name=sim_config.get("name", "Unknown Simulation"),
         n_agents=agents_config.get("count", 10),
         n_goods=economy_config.get("goods", 3),
@@ -86,182 +71,29 @@ def load_config(config_path: Path) -> SimulationConfig:
         max_rounds=sim_config.get("max_rounds", 50),
         random_seed=sim_config.get("seed", 42),
     )
+    # Validate and raise early if invalid
+    validate_simulation_config(config)
+    return config
 
 
-def initialize_simulation(config: SimulationConfig) -> SimulationState:
-    """Initialize agents and grid from configuration."""
-    # Set seeds for reproducibility
-    np.random.seed(config.random_seed)
+def initialize_simulation(config: SimulationConfig) -> RuntimeSimulationState:  # Backwards compatibility wrapper
+    """Wrapper preserving previous function name for CLI; delegates to runtime initializer."""
     random.seed(config.random_seed)
-
-    # Create grid
-    grid = Grid(
-        config.grid_width,
-        config.grid_height,
-        config.marketplace_width,
-        config.marketplace_height,
-    )
-
-    # Generate random starting positions
-    positions = create_random_positions(
-        config.n_agents, config.grid_width, config.grid_height, config.random_seed
-    )
-
-    # Create agents with random endowments and preferences
-    agents = []
-    for i in range(config.n_agents):
-        # Random Cobb-Douglas preferences (Dirichlet)
-        alpha = np.random.dirichlet(np.ones(config.n_goods))
-        alpha = np.maximum(alpha, 0.05)  # Ensure interiority
-        alpha = alpha / np.sum(alpha)  # Renormalize
-
-        # Random endowments (exponential distribution)
-        home_endowment = np.random.exponential(2.0, config.n_goods)
-        personal_endowment = np.random.exponential(1.0, config.n_goods)
-
-        # Create agent
-        agent_home = (positions[i].x, positions[i].y)
-        agent = Agent(
-            agent_id=i,
-            alpha=alpha,
-            home_endowment=home_endowment,
-            personal_endowment=personal_endowment,
-            position=agent_home,
-            home_position=agent_home,
-        )
-        agents.append(agent)
-
-        # Add to grid
-        grid.add_agent(i, positions[i])
-
-    return SimulationState(
-        round=0,
-        agents=agents,
-        grid=grid,
-        prices=np.ones(config.n_goods),  # Initial uniform prices
-        trades=[],
-        agent_travel_costs={agent.agent_id: 0.0 for agent in agents},
-        agent_phases={agent.agent_id: AgentPhase.HOME_PREP for agent in agents},
-    )
+    return initialize_runtime_state(config)
 
 
-def run_simulation_round(
-    state: SimulationState, config: SimulationConfig
-) -> SimulationState:
-    """Execute one round of spatial simulation."""
-
-    # 1. Home preparation: load inventory when agents are at home
-    for agent in state.agents:
-        phase = state.agent_phases[agent.agent_id]
-
-        if phase == AgentPhase.HOME_PREP:
-            if agent.is_at_home(agent.home_position):
-                agent.load_inventory_for_travel()
-                state.agent_phases[agent.agent_id] = AgentPhase.TO_MARKET
-            else:
-                # Agent is misplaced; send them home before loading
-                state.agent_phases[agent.agent_id] = AgentPhase.TO_HOME
-
-    # 2. Move agents according to their lifecycle phase
-    for agent in state.agents:
-        phase = state.agent_phases[agent.agent_id]
-        distance_moved = 0
-
-        if phase == AgentPhase.TO_MARKET:
-            distance_moved = state.grid.move_agent_toward_marketplace(agent.agent_id)
-
-            current_pos = state.grid.get_position(agent.agent_id)
-            agent.position = (current_pos.x, current_pos.y)
-
-            if state.grid.is_in_marketplace(current_pos):
-                state.agent_phases[agent.agent_id] = AgentPhase.AT_MARKET
-
-        elif phase == AgentPhase.TO_HOME:
-            home_position = Position(*agent.home_position)
-            distance_moved = state.grid.move_agent_toward_position(
-                agent.agent_id, home_position
-            )
-
-            current_pos = state.grid.get_position(agent.agent_id)
-            agent.position = (current_pos.x, current_pos.y)
-
-            if agent.is_at_home(agent.home_position):
-                agent.deposit_inventory_at_home()
-                state.agent_travel_costs[agent.agent_id] = 0.0
-                state.agent_phases[agent.agent_id] = AgentPhase.HOME_PREP
-
-        else:
-            # Agent stays in place (either preparing at home or trading in marketplace)
-            current_pos = state.grid.get_position(agent.agent_id)
-            agent.position = (current_pos.x, current_pos.y)
-
-        if distance_moved > 0 and config.movement_cost > 0:
-            travel_cost_this_round = config.movement_cost * distance_moved
-            state.agent_travel_costs[agent.agent_id] += travel_cost_this_round
-
-    # 3. Determine marketplace participants (phase-aware)
-    marketplace_agent_ids = {
-        agent.agent_id
-        for agent in state.agents
-        if state.agent_phases[agent.agent_id] == AgentPhase.AT_MARKET
-        and state.grid.is_in_marketplace(state.grid.get_position(agent.agent_id))
-    }
-    marketplace_agents = [
-        agent for agent in state.agents if agent.agent_id in marketplace_agent_ids
-    ]
-
-    # 4. Solve equilibrium with marketplace participants only
-    if len(marketplace_agents) >= 2:
-        # Filter zero-wealth agents for numerical stability
-        viable_agents = []
-        for agent in marketplace_agents:
-            wealth = np.dot(state.prices, agent.total_endowment)
-            if wealth > 1e-10:
-                viable_agents.append(agent)
-
-        if len(viable_agents) >= 2 and len(state.prices) >= 2:
-            try:
-                prices, z_rest_norm, walras_dot, status = solve_walrasian_equilibrium(
-                    viable_agents
-                )
-                if z_rest_norm < 1e-8:  # Check convergence
-                    state.prices = prices
-
-                    # 4. Execute market clearing with travel-adjusted budgets
-                    # Use core market API and pass cumulative travel costs
-                    from src.econ.market import apply_trades_to_agents
-
-                    market_result = execute_constrained_clearing(
-                        viable_agents,
-                        prices,
-                        capacity=None,
-                        travel_costs=state.agent_travel_costs,
-                    )
-
-                    # Apply executed trades to agent inventories
-                    apply_trades_to_agents(viable_agents, market_result.executed_trades)
-                    state.trades = market_result.executed_trades
-
-                    # After trading, agents head back home to complete the cycle
-                    for agent in viable_agents:
-                        state.agent_phases[agent.agent_id] = AgentPhase.TO_HOME
-                else:
-                    print(
-                        f"Warning: Equilibrium solver failed to converge in round {state.round}, z_rest_norm={z_rest_norm}"
-                    )
-            except Exception as e:
-                print(
-                    f"Warning: Equilibrium computation failed in round {state.round}: {e}"
-                )
-
-    state.round += 1
-    return state
+def run_simulation_round(state: RuntimeSimulationState, config: SimulationConfig) -> RuntimeSimulationState:
+    """Backward compatible wrapper delegating to core.simulation.run_round."""
+    return run_round(state, config)
 
 
 def run_simulation(
     config_path: Path,
     output_path: Optional[Path] = None,
     seed_override: Optional[int] = None,
+    ascii_interval: Optional[int] = None,
+    gui: bool = False,
+    tick_ms: int = 120,
 ) -> Dict[str, Any]:
     """Run complete simulation from configuration."""
 
@@ -283,12 +115,27 @@ def run_simulation(
     # Initialize simulation
     state = initialize_simulation(config)
 
+    # Initialize structured logger if output path provided
+    run_logger = None  # defer typing; optional logger instance
+    if output_path and RunLogger is not None:  # type: ignore
+        run_name = f"{config.name}_seed{config.random_seed}"
+        run_logger = RunLogger(output_path, run_name)  # type: ignore
+
     # Run simulation rounds
     results = []
-    for round_num in range(config.max_rounds):
+    ascii_renderer = ASCIIRenderer() if ascii_interval else None
+    gui_renderer = None
+    if gui and PygameRenderer is not None:  # type: ignore
+        try:
+            gui_renderer = PygameRenderer(tick_ms=tick_ms, title=f"{config.name} (seed {config.random_seed})")
+        except Exception as e:  # pragma: no cover
+            print(f"Warning: failed to initialize GUI renderer: {e}")
+            gui_renderer = None
+
+    for _ in range(config.max_rounds):
         state = run_simulation_round(state, config)
 
-        # Record round results
+        # Record round results (summary)
         round_result = {
             "round": state.round,
             "n_marketplace_agents": len(state.grid.get_agents_in_marketplace()),
@@ -298,6 +145,67 @@ def run_simulation(
             "cumulative_travel_costs": dict(state.agent_travel_costs),
         }
         results.append(round_result)
+
+        # Visualization (Phase 0–2 minimal)
+        if ascii_renderer and ascii_interval and (state.round % ascii_interval == 0):
+            frame = build_frame(state, config)
+            ascii_renderer.render(frame)
+        if gui_renderer:
+            try:
+                frame = build_frame(state, config)
+                gui_renderer.render(frame)  # type: ignore
+            except SystemExit:
+                print("GUI window closed by user — terminating simulation loop early.")
+                break
+
+        # Structured per-agent logging
+        if run_logger is not None and RoundLogRecord is not None:  # type: ignore
+            marketplace_ids = {
+                a.agent_id
+                for a in state.agents
+                if state.grid.is_in_marketplace(state.grid.get_position(a.agent_id))
+            }
+
+            # Aggregate executed net trades per agent and good for this round
+            # Build matrix of zeros if no trades
+            n_goods = len(state.prices)
+            executed_net = {a.agent_id: [0.0] * n_goods for a in state.agents}
+            for tr in state.trades:
+                executed_net[tr.agent_id][tr.good_id] += tr.quantity
+
+            unmet_demand = None
+            unmet_supply = None
+            if state.last_market_result is not None:
+                unmet_demand = state.last_market_result.unmet_demand.tolist()
+                unmet_supply = state.last_market_result.unmet_supply.tolist()
+
+            records = []
+            for agent in state.agents:
+                pos = state.grid.get_position(agent.agent_id)
+                # Compute simple utility snapshot (total endowment bundle)
+                try:
+                    util = agent.utility(agent.total_endowment)
+                except Exception:
+                    util = None
+                records.append(
+                    RoundLogRecord(
+                        core_schema_version=SCHEMA_VERSION,
+                        core_round=state.round,
+                        core_agent_id=agent.agent_id,
+                        spatial_pos_x=pos.x,
+                        spatial_pos_y=pos.y,
+                        spatial_in_marketplace=agent.agent_id in marketplace_ids,
+                        econ_prices=state.prices.tolist(),
+                        econ_executed_net=executed_net[agent.agent_id],
+                        ration_unmet_demand=unmet_demand,
+                        ration_unmet_supply=unmet_supply,
+                        wealth_travel_cost=state.agent_travel_costs[agent.agent_id],
+                        wealth_effective_budget=None,  # Placeholder (future: adjusted wealth at pricing)
+                        financing_mode="PERSONAL",  # Default financing mode (schema-guarded)
+                        utility=util,
+                    )
+                )
+            run_logger.log_round(records)
 
         # Print progress every 10 rounds
         if state.round % 10 == 0:
@@ -330,6 +238,15 @@ def run_simulation(
         "final_travel_costs": dict(state.agent_travel_costs),
     }
 
+    # Finalize structured logging
+    if run_logger is not None:
+        try:
+            log_path = run_logger.finalize()
+            simulation_results["structured_log_path"] = str(log_path)
+            simulation_results["schema_version"] = SCHEMA_VERSION
+        except Exception as e:  # pragma: no cover
+            print(f"Warning: failed to finalize structured log: {e}")
+
     # Save results if output path specified
     if output_path:
         output_path.mkdir(parents=True, exist_ok=True)
@@ -346,9 +263,10 @@ def main():
     parser.add_argument("--config", required=True, help="Configuration YAML file")
     parser.add_argument("--seed", type=int, help="Random seed override")
     parser.add_argument("--output", help="Output directory for results")
-    parser.add_argument(
-        "--no-gui", action="store_true", help="Disable pygame visualization"
-    )
+    parser.add_argument("--no-gui", action="store_true", help="(Deprecated placeholder) Use --gui instead")
+    parser.add_argument("--gui", action="store_true", help="Enable pygame visualization (if installed)")
+    parser.add_argument("--tick-ms", type=int, default=120, help="GUI: delay between frames in milliseconds (default 120)")
+    parser.add_argument("--ascii-viz-interval", type=int, help="Render ASCII grid every N rounds (headless visualization)")
 
     args = parser.parse_args()
 
@@ -363,7 +281,14 @@ def main():
 
     try:
         # Run simulation
-        results = run_simulation(config_path, output_path, args.seed)
+        results = run_simulation(
+            config_path,
+            output_path,
+            args.seed,
+            ascii_interval=args.ascii_viz_interval,
+            gui=args.gui,
+            tick_ms=args.tick_ms,
+        )
 
         # Print summary
         print(f"\nSimulation completed in {results['final_round']} rounds")
@@ -371,6 +296,8 @@ def main():
             f"Final marketplace participation: {results['agents_in_marketplace']}/{results['total_agents']}"
         )
         print(f"Final prices: {results['final_prices']}")
+        if 'structured_log_path' in results:
+            print(f"Structured log: {results['structured_log_path']} (schema {results.get('schema_version')})")
 
         if results["agents_in_marketplace"] == results["total_agents"]:
             print("✅ All agents reached marketplace!")
