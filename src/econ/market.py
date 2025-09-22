@@ -26,8 +26,20 @@ Date: 2024-12-19
 
 import numpy as np
 import logging
-from typing import List, Optional, Tuple, Dict
+from typing import List, Optional, Tuple, Dict, Any
 from dataclasses import dataclass
+from enum import Enum
+
+
+class FinancingMode(str, Enum):
+    """Financing mode for market clearing.
+
+    PERSONAL: Purchases must be financed by value of concurrent sales (pure exchange)
+    TOTAL_WEALTH: (Future) Purchases may be backed by total endowment value.
+    """
+
+    PERSONAL = "PERSONAL"
+    TOTAL_WEALTH = "TOTAL_WEALTH"  # Placeholder for future extension
 
 # Import from src.core to fix relative import issues
 try:
@@ -390,6 +402,7 @@ def _validate_clearing_invariants(
     executed_sells_dict: Dict[int, np.ndarray],
     executed_volumes: np.ndarray,
     prices: np.ndarray,
+    financing_mode: FinancingMode = FinancingMode.PERSONAL,
 ) -> None:
     """Validate economic invariants after clearing.
 
@@ -524,6 +537,7 @@ def execute_constrained_clearing(
     prices: np.ndarray,
     capacity: Optional[np.ndarray] = None,
     travel_costs: Optional[Dict[int, float]] = None,
+    financing_mode: FinancingMode = FinancingMode.PERSONAL,
 ) -> MarketResult:
     """Execute constrained market clearing with proportional rationing.
 
@@ -566,6 +580,7 @@ def execute_constrained_clearing(
             total_volume=np.zeros(n_goods),
             prices=prices.copy(),
             participant_count=0,
+            rationing_diagnostics=None,
         )
 
     logger.info(
@@ -599,7 +614,12 @@ def execute_constrained_clearing(
 
     # Step 4: Validate economic invariants
     _validate_clearing_invariants(
-        orders, executed_buys_dict, executed_sells_dict, executed_volumes, prices
+        orders,
+        executed_buys_dict,
+        executed_sells_dict,
+        executed_volumes,
+        prices,
+        financing_mode=financing_mode,
     )
 
     # Step 5: Compute rationing diagnostics for carry-over analysis

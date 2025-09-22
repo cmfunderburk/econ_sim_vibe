@@ -1,3 +1,34 @@
+"""Core numerical and economic constants for the simulation.
+
+These values are sourced from project specification documents and are
+treated as authoritative. Do NOT modify without updating specification
+and associated validation tests that rely on exact magnitudes.
+"""
+
+from __future__ import annotations
+
+# Primary convergence tolerance for rest-goods excess demand system
+SOLVER_TOL: float = 1e-8
+
+# Feasibility / conservation tolerance (value feasibility, goods conservation)
+FEASIBILITY_TOL: float = 1e-10
+
+# Small epsilon to prevent division by zero in proportional rationing
+RATIONING_EPS: float = 1e-10
+
+# Index of the numéraire good (p[numéraire] ≡ 1.0)
+NUMERAIRE_GOOD: int = 0
+
+# Minimum Cobb-Douglas preference weight (interiority enforcement)
+MIN_ALPHA: float = 0.05
+
+__all__ = [
+    "SOLVER_TOL",
+    "FEASIBILITY_TOL",
+    "RATIONING_EPS",
+    "NUMERAIRE_GOOD",
+    "MIN_ALPHA",
+]
 """
 Economic simulation constants - Single source of truth.
 

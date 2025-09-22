@@ -33,6 +33,7 @@ from src.econ.market import (
     _validate_clearing_invariants,
     _convert_to_trades,
     AgentOrder,
+    FinancingMode,
     RATIONING_EPS,
     FEASIBILITY_TOL,
 )
@@ -332,6 +333,7 @@ class TestClearingInvariantsValidation:
             valid_executed_sells,
             valid_executed_volumes,
             self.prices,
+            FinancingMode.PERSONAL,
         )
 
     def test_market_imbalance_detection(self):
@@ -346,6 +348,7 @@ class TestClearingInvariantsValidation:
                 self.executed_sells,
                 imbalanced_volumes,
                 self.prices,
+                FinancingMode.PERSONAL,
             )
 
     def test_inventory_constraint_violation(self):
@@ -382,11 +385,12 @@ class TestClearingInvariantsValidation:
                 violating_sells,
                 balanced_volumes,
                 self.prices,
+                FinancingMode.PERSONAL,
             )
 
     def test_inventory_constraint_violation_in_clearing(self):
         """Test detection of inventory constraint violations in clearing validation."""
-        # Create scenario that violates inventory constraints  
+        # Create scenario that violates inventory constraints
         valid_buys = {
             1: np.array([0.5, 0.0]),  # Agent 1 buys reasonable amount
             2: np.array([1.5, 0.0]),  # Agent 2 buys reasonable amount
@@ -403,7 +407,10 @@ class TestClearingInvariantsValidation:
                 1, np.array([2.0, 1.0]), np.array([0.0, 1.5]), np.array([1.0, 2.0])
             ),
             AgentOrder(
-                2, np.array([1.0, 0.5]), np.array([1.0, 0.0]), np.array([1.0, 1.0])  # Max capacity < actual sell
+                2,
+                np.array([1.0, 0.5]),
+                np.array([1.0, 0.0]),
+                np.array([1.0, 1.0]),  # Max capacity < actual sell
             ),
         ]
 
@@ -415,6 +422,7 @@ class TestClearingInvariantsValidation:
                 violating_sells,
                 balanced_volumes,
                 self.prices,
+                FinancingMode.PERSONAL,
             )
 
 
@@ -476,7 +484,7 @@ class TestExecuteConstrainedClearing:
 
     def setup_method(self):
         """Set up realistic test scenario with Cobb-Douglas agents.
-        
+
         Uses simplified inventory model: agents load full inventory before trading.
         """
         # Create agents with complementary preferences - total endowments [3, 1] and [1, 3]
@@ -491,17 +499,17 @@ class TestExecuteConstrainedClearing:
         self.agent2 = Agent(
             agent_id=2,
             alpha=np.array([0.4, 0.6]),
-            home_endowment=np.array([1.0, 3.0]),  # Total endowment [1, 3]  
+            home_endowment=np.array([1.0, 3.0]),  # Total endowment [1, 3]
             personal_endowment=np.array([0.0, 0.0]),
             position=(5, 5),
         )
 
         self.agents = [self.agent1, self.agent2]
-        
+
         # SIMPLIFIED INVENTORY MODEL: Load full inventory for trading
         for agent in self.agents:
             agent.load_inventory_for_travel()
-            
+
         self.prices = np.array([1.0, 1.0])
 
     def test_successful_clearing_execution(self):
@@ -698,7 +706,7 @@ class TestMarketClearingIntegration:
         # The key test is that the system doesn't create or destroy goods
         if len(result.executed_trades) > 0:
             assert result.clearing_efficiency > 0  # Some efficiency if trades occurred
-        
+
         # Test that liquidity constraints are properly enforced
         assert np.all(result.unmet_demand >= 0)  # Unmet demand should be non-negative
         assert np.all(result.unmet_supply >= 0)  # Unmet supply should be non-negative

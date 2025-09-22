@@ -8,7 +8,23 @@ in market economies with agent-based modeling.
 __version__ = "0.1.0"
 __author__ = "Economic Simulation Project"
 
-# Core modules will be imported here once implemented
-# from .core import Agent, SimulationState
-# from .econ import WalrasianSolver, MarketClearing
-# from .spatial import Grid, Movement
+# Re-export commonly used symbols for convenience
+try:  # pragma: no cover - convenience import
+	from .constants import (
+		SOLVER_TOL,
+		FEASIBILITY_TOL,
+		RATIONING_EPS,
+		NUMERAIRE_GOOD,
+		MIN_ALPHA,
+	)
+except Exception:  # pragma: no cover
+	# During partial initialization some modules may be absent
+	pass
+
+__all__ = [
+	"SOLVER_TOL",
+	"FEASIBILITY_TOL",
+	"RATIONING_EPS",
+	"NUMERAIRE_GOOD",
+	"MIN_ALPHA",
+]
