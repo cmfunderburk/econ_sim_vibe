@@ -7,6 +7,15 @@ The format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.0.
 ## [Unreleased]
 - Placeholder for upcoming changes.
 
+### Fixed (post-2025-09-21)
+- Replay & logging tests now format-agnostic: accept either JSONL or Parquet (`*_round_log.(jsonl|parquet[.gz])`) restoring green suite when pandas enables Parquet output.
+- Resolved numpy array truth-value ambiguity in playback frame construction (`LogReplayStream._build_frame_from_rows`) and golden digest test logic (explicit list/length checks instead of implicit boolean evaluation).
+- Normalized Parquet-to-JSONL conversion in regression replay test with numpy array serialization guard (arrays converted to lists pre-dump).
+
+### Maintenance
+- Added defensive normalization for `econ_prices` arrays during HUD replay to prevent ValueError in environments with numpy returning ndarray rows from Parquet loader.
+- Test suite remains at 250/250 passing following these adjustments; no economic logic modified.
+
 ## [2025-09-21] Spatial Logging & Diagnostics Upgrade
 ### Added
 - Logging schema version bumped additively to `1.1.0` (from `1.0.0`) introducing two spatial aggregate metrics: `max_distance_to_market` and `avg_distance_to_market` (repeated per row for analytic convenience).
