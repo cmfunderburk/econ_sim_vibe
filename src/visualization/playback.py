@@ -347,10 +347,17 @@ class LogReplayStream:
         self, target_round: int, round_rows: List[Dict[str, Any]]
     ) -> FrameData:
         # Derive basic frame attributes (prices assumed identical across rows)
-        raw_prices_any: Any = round_rows[0].get("econ_prices", []) or []
+        # Extract prices without triggering ambiguous truth evaluation on numpy arrays
+        raw_prices_any: Any = round_rows[0].get("econ_prices", [])
+        try:  # Normalize numpy array to list if present
+            import numpy as _np  # type: ignore
+            if isinstance(raw_prices_any, _np.ndarray):  # type: ignore[attr-defined]
+                raw_prices_any = raw_prices_any.tolist()
+        except Exception:  # pragma: no cover - defensive
+            pass
         prices: List[float] = []
         if isinstance(raw_prices_any, list):
-            for _p in raw_prices_any:
+            for _p in raw_prices_any:  # type: ignore[assignment]
                 if isinstance(_p, (int, float, str)):
                     try:
                         prices.append(float(_p))

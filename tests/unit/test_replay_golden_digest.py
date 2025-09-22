@@ -45,8 +45,17 @@ def _build_digest(rows: Sequence[Row]) -> str:
         prices_list: Iterable[float] = ()
         for rr in recs:
             prices_candidate = rr.get("econ_prices")
-            if prices_candidate:
-                prices_list = prices_candidate
+            if prices_candidate is None:
+                continue
+            # Normalize possible numpy array to list to avoid ambiguous truth values
+            try:
+                import numpy as _np  # type: ignore
+                if isinstance(prices_candidate, _np.ndarray):  # type: ignore[attr-defined]
+                    prices_candidate = prices_candidate.tolist()
+            except Exception:
+                pass
+            if isinstance(prices_candidate, (list, tuple)) and len(prices_candidate) > 0:  # type: ignore[arg-type]
+                prices_list = list(prices_candidate)  # type: ignore[arg-type]
                 break
         price_str = ";".join(f"{float(p):.6g}" for p in prices_list)
         # Agent hashes sorted by agent id

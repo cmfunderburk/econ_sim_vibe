@@ -35,8 +35,14 @@ def test_hud_fields_present_replay(tmp_path: Path):
         logger.log_round(records)
     logger.finalize()
     # Find log file
+    # Accept either JSONL or Parquet (with optional gzip) to remain format-agnostic
     log_files = list(out_dir.glob("*_round_log.jsonl"))
-    assert log_files, "No round log produced"
+    if not log_files:
+        # Parquet variants
+        log_files = list(out_dir.glob("*_round_log.parquet")) or list(
+            out_dir.glob("*_round_log.parquet.gz")
+        )
+    assert log_files, "No round log produced (expected *_round_log.jsonl or .parquet[.gz])"
     replay = LogReplayStream(log_files[0])
     f1 = replay.next_frame()
     assert f1 is not None

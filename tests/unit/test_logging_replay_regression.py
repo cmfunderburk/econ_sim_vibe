@@ -49,10 +49,35 @@ def test_multi_round_logging_and_replay(tmp_path: Path):
     result = subprocess.run(cmd, capture_output=True, text=True, check=True)
     assert result.returncode == 0, result.stderr
 
-    # Find round log (pattern: *_round_log.jsonl)
+    # Find round log (JSONL preferred; fallback to parquet variants)
     round_logs = list(output_dir.glob("*_round_log.jsonl"))
-    assert round_logs, "No round log produced"
+    if not round_logs:
+        round_logs = list(output_dir.glob("*_round_log.parquet")) or list(
+            output_dir.glob("*_round_log.parquet.gz")
+        )
+    assert round_logs, "No round log produced (expected *_round_log.(jsonl|parquet[.gz]))"
     round_log = round_logs[0]
+    # If parquet, convert rows to JSON-like records for parsing
+    if round_log.suffix.startswith(".parquet"):
+        try:
+            import pandas as pd  # type: ignore
+            df = pd.read_parquet(round_log)  # type: ignore[arg-type]
+            tmp_jsonl = output_dir / "_temp_round_log_converted.jsonl"
+            with tmp_jsonl.open("w") as f:
+                for rec in df.to_dict(orient="records"):  # type: ignore[call-arg]
+                    # Normalize any numpy arrays to lists for JSON serialization
+                    for k, v in list(rec.items()):
+                        try:
+                            import numpy as _np  # type: ignore
+                            if isinstance(v, _np.ndarray):  # type: ignore[attr-defined]
+                                rec[k] = v.tolist()
+                        except Exception:
+                            continue
+                    import json as _json
+                    f.write(_json.dumps(rec) + "\n")
+            round_log = tmp_jsonl
+        except Exception as e:  # pragma: no cover
+            raise AssertionError(f"Failed to read parquet round log: {e}")
 
     rounds: List[int] = []
     agent_ids_per_round: Dict[int, Set[int]] = {}
