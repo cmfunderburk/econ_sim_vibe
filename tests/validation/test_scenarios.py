@@ -27,7 +27,12 @@ except ImportError:
     from src.constants import MIN_ALPHA
 
 # Import test categorization markers
-from tests.test_categorization import economic_core, robustness, real_functions, validation
+from tests.test_categorization import (
+    economic_core,
+    robustness,
+    real_functions,
+    validation,
+)
 
 
 @pytest.mark.economic_core
@@ -689,7 +694,7 @@ def test_v4_throughput_cap():
         # Agents can buy more than they sell using their total wealth
         net_trade_value = buy_value - sell_value
         max_reasonable_net_trade = 1000.0  # Large but finite bound
-        
+
         assert abs(net_trade_value) <= max_reasonable_net_trade, (
             f"Unreasonable net trade value for agent {agent.agent_id}: net_trade={net_trade_value}"
         )
@@ -981,26 +986,34 @@ def test_v7_empty_marketplace():
     marketplace_agents = []  # No agents at marketplace
 
     # Test actual equilibrium solver behavior
-    prices, z_rest_norm, walras_dot, status = solve_walrasian_equilibrium(marketplace_agents)
-    
+    prices, z_rest_norm, walras_dot, status = solve_walrasian_equilibrium(
+        marketplace_agents
+    )
+
     # Verify real function behavior
     assert prices is None, f"Expected prices=None for empty marketplace, got {prices}"
-    assert status == "no_participants", f"Expected 'no_participants' status, got {status}"
-    
+    assert status == "no_participants", (
+        f"Expected 'no_participants' status, got {status}"
+    )
+
     print(f"   ✅ solve_walrasian_equilibrium: prices={prices}, status='{status}'")
 
-    # Test actual market clearing behavior  
+    # Test actual market clearing behavior
     dummy_prices = np.array([1.0, 1.0])  # Valid prices for testing
     result = execute_constrained_clearing(marketplace_agents, dummy_prices)
-    
-    assert result.participant_count == 0, f"Expected 0 participants, got {result.participant_count}"
-    assert len(result.executed_trades) == 0, f"Expected 0 trades, got {len(result.executed_trades)}"
-    
+
+    assert result.participant_count == 0, (
+        f"Expected 0 participants, got {result.participant_count}"
+    )
+    assert len(result.executed_trades) == 0, (
+        f"Expected 0 trades, got {len(result.executed_trades)}"
+    )
+
     print("   ✅ execute_constrained_clearing handles empty list correctly")
 
     # Test Case 2: Single participant (insufficient for meaningful equilibrium)
     print("\n2. Testing single marketplace participant...")
-    
+
     # Create single agent at marketplace
     single_agent = Agent(
         agent_id=1,
@@ -1012,16 +1025,20 @@ def test_v7_empty_marketplace():
     single_participant = [single_agent]
 
     # Test actual solver behavior with single participant
-    prices, z_rest_norm, walras_dot, status = solve_walrasian_equilibrium(single_participant)
-    
+    prices, z_rest_norm, walras_dot, status = solve_walrasian_equilibrium(
+        single_participant
+    )
+
     # Single agent case should be handled gracefully by solver
     print(f"   Single participant result: prices={prices}, status='{status}'")
-    
+
     # The exact behavior may vary, but should not crash
-    assert status in ["converged", "insufficient_participants", "poor_convergence"], (
-        f"Unexpected status for single participant: {status}"
-    )
-    
+    assert status in [
+        "converged",
+        "insufficient_participants",
+        "poor_convergence",
+    ], f"Unexpected status for single participant: {status}"
+
     print("   ✅ Single participant handled gracefully by solver")
 
     # Test Case 3: Participants with only one good type (numéraire degeneracy)
@@ -1044,10 +1061,12 @@ def test_v7_empty_marketplace():
         single_good_agents.append(agent)
 
     # Test actual solver behavior with single good
-    prices, z_rest_norm, walras_dot, status = solve_walrasian_equilibrium(single_good_agents)
-    
+    prices, z_rest_norm, walras_dot, status = solve_walrasian_equilibrium(
+        single_good_agents
+    )
+
     print(f"   Single good result: prices={prices}, status='{status}'")
-    
+
     # Solver should handle degenerate case gracefully
     if status == "converged":
         # If it converges, prices should still be valid
@@ -1078,22 +1097,29 @@ def test_v7_empty_marketplace():
         zero_wealth_agents.append(agent)
 
     # Test actual solver behavior with zero wealth agents
-    prices, z_rest_norm, walras_dot, status = solve_walrasian_equilibrium(zero_wealth_agents)
-    
+    prices, z_rest_norm, walras_dot, status = solve_walrasian_equilibrium(
+        zero_wealth_agents
+    )
+
     print(f"   Zero wealth result: prices={prices}, status='{status}'")
-    
+
     # Solver should handle zero wealth case appropriately
-    expected_statuses = ["no_participants", "failed", "poor_convergence", "insufficient_viable_agents"]
+    expected_statuses = [
+        "no_participants",
+        "failed",
+        "poor_convergence",
+        "insufficient_viable_agents",
+    ]
     assert status in expected_statuses, (
         f"Expected one of {expected_statuses} for zero wealth, got '{status}'"
     )
-    
+
     print("   ✅ Zero wealth exclusion handled by solver")
 
     print("\n" + "=" * 50)
     print("🎉 V7 EMPTY MARKETPLACE VALIDATION COMPLETE")
     print("✅ Empty marketplace handled by real functions")
-    print("✅ Single participant handled gracefully")  
+    print("✅ Single participant handled gracefully")
     print("✅ Single good degeneracy tested with actual solver")
     print("✅ Zero wealth exclusion tested with real behavior")
     print("✅ All edge cases use production code, not hardcoded logic")
@@ -1382,34 +1408,36 @@ def test_v8_stop_conditions():
 
     # Test actual equilibrium solving and market clearing
     prices, z_rest_norm, walras_dot, status = solve_walrasian_equilibrium(agents)
-    
+
     print(f"   Equilibrium result: status='{status}', z_norm={z_rest_norm:.2e}")
-    
+
     if status == "converged":
         # Execute actual market clearing
         result = execute_constrained_clearing(agents, prices)
-        
+
         # Test real convergence metrics
         market_fully_cleared = (
-            np.sum(result.unmet_demand) < FEASIBILITY_TOL and 
-            np.sum(result.unmet_supply) < FEASIBILITY_TOL
+            np.sum(result.unmet_demand) < FEASIBILITY_TOL
+            and np.sum(result.unmet_supply) < FEASIBILITY_TOL
         )
-        
+
         convergence_achieved = z_rest_norm < SOLVER_TOL and abs(walras_dot) < SOLVER_TOL
-        
+
         print(f"   Market clearing efficiency: {result.clearing_efficiency:.4f}")
         print(f"   Unmet demand total: {np.sum(result.unmet_demand):.6f}")
         print(f"   Convergence achieved: {convergence_achieved}")
-        
+
         # This represents actual termination condition logic
         should_terminate_market = market_fully_cleared and convergence_achieved
-        
+
         print(f"   ✅ Market termination condition: {should_terminate_market}")
-        
+
         # Verify real computed metrics are reasonable
-        assert isinstance(result.clearing_efficiency, float), "Efficiency should be computed"
+        assert isinstance(result.clearing_efficiency, float), (
+            "Efficiency should be computed"
+        )
         assert 0.0 <= result.clearing_efficiency <= 1.0, "Efficiency should be in [0,1]"
-        
+
     else:
         print(f"   Non-convergence case: status='{status}' (acceptable for testing)")
 

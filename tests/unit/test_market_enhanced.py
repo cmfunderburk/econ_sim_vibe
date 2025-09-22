@@ -11,7 +11,7 @@ budget constraints (p·buy ≤ p·sell), which is economically superior.
 
 OLD APPROACH (what these tests expect):
 - Unlimited credit assumption in pure exchange economy
-- Pure mathematical theory without economic feasibility  
+- Pure mathematical theory without economic feasibility
 - Agents can buy unlimited goods without sufficient selling capacity
 
 NEW APPROACH (why tests fail):
@@ -25,7 +25,7 @@ ORIGINAL PURPOSE (now superseded):
 - Exact Cobb-Douglas demand formula verification in _generate_agent_orders
 - Budget constraint enforcement in order generation
 - Economic consistency between agent.demand() and market orders
-- Theoretical demand calculation validation  
+- Theoretical demand calculation validation
 - Order generation economic property testing
 """
 
@@ -56,10 +56,10 @@ class TestCobbDouglasOrderGeneration:
 
     def test_single_agent_order_analytical_verification(self):
         """Test single agent order generation against exact Cobb-Douglas formula per SPECIFICATION.md.
-        
+
         Per specification: Orders should use budget-constrained wealth w_i = p·ω_i^total - κ·d_i
         for demand calculation, then subtract personal inventory for net orders.
-        
+
         Uses simplified inventory model: agent loads full inventory before trading.
         """
         # Agent with α = [0.6, 0.4], total endowment = [3, 2]
@@ -70,34 +70,38 @@ class TestCobbDouglasOrderGeneration:
             personal_endowment=np.array([0.0, 0.0]),  # Empty personal inventory
             position=(0, 0),  # At marketplace
         )
-        
+
         # SIMPLIFIED INVENTORY MODEL: Load full inventory for trading
         agent.load_inventory_for_travel()
-        
+
         prices = np.array([1.0, 2.0])
-        
+
         # SPECIFICATION COMPLIANCE: Use total endowment wealth
         total_endowment = agent.total_endowment  # [3, 2]
         wealth = np.dot(prices, total_endowment)  # 1*3 + 2*2 = 7
-        analytical_demand = agent.alpha * wealth / prices  # [0.6*7/1, 0.4*7/2] = [4.2, 1.4]
-        expected_net = analytical_demand - agent.personal_endowment  # [4.2-3, 1.4-2] = [1.2, -0.6]
-        
+        analytical_demand = (
+            agent.alpha * wealth / prices
+        )  # [0.6*7/1, 0.4*7/2] = [4.2, 1.4]
+        expected_net = (
+            analytical_demand - agent.personal_endowment
+        )  # [4.2-3, 1.4-2] = [1.2, -0.6]
+
         # Test the fixed implementation
         orders = _generate_agent_orders([agent], prices)
         order = orders[0]
         net_order = order.buy_orders - order.sell_orders
-        
+
         # Should now match specification
         assert np.allclose(net_order, expected_net, atol=1e-12), (
             f"Net order {net_order} != specification expectation {expected_net}"
         )
-        
+
         # Verify agent.demand() consistency
         agent_demand = agent.demand(prices)
         assert np.allclose(agent_demand, analytical_demand, atol=1e-12), (
             f"Agent demand {agent_demand} != analytical {analytical_demand}"
         )
-        
+
         print(f"✅ SPECIFICATION COMPLIANCE VERIFIED:")
         print(f"  Implementation net order: {net_order}")
         print(f"  Specification expects: {expected_net}")
@@ -106,7 +110,7 @@ class TestCobbDouglasOrderGeneration:
 
     def test_multi_agent_demand_formula_validation(self):
         """Test multiple agents with different preferences for Cobb-Douglas accuracy.
-        
+
         Uses simplified inventory model: agents load full inventory before trading.
         """
         # Agent 1: Heavy preference for good 1, total endowment [1.5, 3.0]
@@ -117,7 +121,7 @@ class TestCobbDouglasOrderGeneration:
             personal_endowment=np.array([0.0, 0.0]),
             position=(0, 0),
         )
-        
+
         # Agent 2: Heavy preference for good 2, total endowment [3.5, 1.5]
         agent2 = Agent(
             agent_id=2,
@@ -126,37 +130,39 @@ class TestCobbDouglasOrderGeneration:
             personal_endowment=np.array([0.0, 0.0]),
             position=(0, 0),
         )
-        
+
         agents = [agent1, agent2]
-        
+
         # SIMPLIFIED INVENTORY MODEL: Load full inventory for trading
         for agent in agents:
             agent.load_inventory_for_travel()
-        
+
         prices = np.array([1.0, 1.5])
-        
+
         # Compute analytical demands for each agent
         analytical_demands = []
         for agent in agents:
             wealth = np.dot(prices, agent.total_endowment)
             demand = agent.alpha * wealth / prices
             analytical_demands.append(demand)
-        
+
         # Generate orders
         orders = _generate_agent_orders(agents, prices)
-        
+
         # Verify each order matches analytical expectations
-        for i, (order, agent, analytical_demand) in enumerate(zip(orders, agents, analytical_demands)):
+        for i, (order, agent, analytical_demand) in enumerate(
+            zip(orders, agents, analytical_demands)
+        ):
             net_order = order.buy_orders - order.sell_orders
             expected_net = analytical_demand - agent.personal_endowment
-            
+
             assert np.allclose(net_order, expected_net, atol=1e-12), (
-                f"Agent {i+1} net order {net_order} != expected {expected_net}"
+                f"Agent {i + 1} net order {net_order} != expected {expected_net}"
             )
 
     def test_wealth_calculation_in_order_generation(self):
         """Test that order generation uses correct wealth calculation from total endowment.
-        
+
         Uses simplified inventory model: agent loads full inventory before trading.
         """
         agent = Agent(
@@ -166,22 +172,22 @@ class TestCobbDouglasOrderGeneration:
             personal_endowment=np.array([0.0, 0.0]),
             position=(0, 0),
         )
-        
+
         # SIMPLIFIED INVENTORY MODEL: Load full inventory for trading
         agent.load_inventory_for_travel()
-        
+
         prices = np.array([1.0, 3.0])
-        
+
         # Expected wealth should be from total endowment
         expected_wealth = np.dot(prices, agent.total_endowment)  # 1*3 + 3*3 = 12
-        
+
         # Generate order and compute implied wealth
         orders = _generate_agent_orders([agent], prices)
         order = orders[0]
-        
+
         net_order = order.buy_orders - order.sell_orders
         implied_desired = net_order + agent.personal_endowment
-        
+
         # Verify this matches Cobb-Douglas with expected wealth
         analytical_demand = agent.alpha * expected_wealth / prices
         assert np.allclose(implied_desired, analytical_demand, atol=1e-12), (
@@ -190,7 +196,7 @@ class TestCobbDouglasOrderGeneration:
 
     def test_budget_constraint_in_orders(self):
         """Test that generated orders respect budget constraints exactly.
-        
+
         Uses simplified inventory model: agent loads full inventory before trading.
         """
         agent = Agent(
@@ -200,23 +206,23 @@ class TestCobbDouglasOrderGeneration:
             personal_endowment=np.array([0.0, 0.0]),
             position=(0, 0),
         )
-        
+
         # SIMPLIFIED INVENTORY MODEL: Load full inventory for trading
         agent.load_inventory_for_travel()
-        
+
         prices = np.array([1.0, 2.0])
-        
+
         orders = _generate_agent_orders([agent], prices)
         order = orders[0]
-        
+
         # Net order represents desired change in holdings
         net_order = order.buy_orders - order.sell_orders
         desired_holdings = agent.personal_endowment + net_order
-        
+
         # Budget constraint: cost of desired holdings = wealth
         cost_of_desired = np.dot(prices, desired_holdings)
         wealth = np.dot(prices, agent.total_endowment)
-        
+
         assert abs(cost_of_desired - wealth) < 1e-12, (
             f"Budget constraint violated: cost={cost_of_desired}, wealth={wealth}"
         )
@@ -231,16 +237,18 @@ class TestCobbDouglasOrderGeneration:
             personal_endowment=np.array([1.0, 5.0]),  # Has lots of good 2 to sell
             position=(0, 0),
         )
-        
+
         prices = np.array([1.0, 1.0])
-        
+
         orders = _generate_agent_orders([agent], prices)
         order = orders[0]
-        
+
         # All buy and sell orders should be non-negative
         assert np.all(order.buy_orders >= 0), f"Negative buy orders: {order.buy_orders}"
-        assert np.all(order.sell_orders >= 0), f"Negative sell orders: {order.sell_orders}"
-        
+        assert np.all(order.sell_orders >= 0), (
+            f"Negative sell orders: {order.sell_orders}"
+        )
+
         # Agent should want to buy good 1 and sell good 2
         assert order.buy_orders[0] > 0  # Should buy good 1
         assert order.sell_orders[1] > 0  # Should sell good 2
@@ -254,19 +262,23 @@ class TestCobbDouglasOrderGeneration:
             personal_endowment=np.array([2.0, 1.0]),  # Limited inventory
             position=(0, 0),
         )
-        
+
         prices = np.array([1.0, 1.0])
-        
+
         orders = _generate_agent_orders([agent], prices)
         order = orders[0]
-        
+
         # Sell orders should never exceed personal inventory
-        assert np.all(order.sell_orders <= agent.personal_endowment + FEASIBILITY_TOL), (
+        assert np.all(
+            order.sell_orders <= agent.personal_endowment + FEASIBILITY_TOL
+        ), (
             f"Sell orders {order.sell_orders} exceed inventory {agent.personal_endowment}"
         )
-        
+
         # Max sell capacity should equal personal inventory
-        assert np.allclose(order.max_sell_capacity, agent.personal_endowment, atol=1e-12), (
+        assert np.allclose(
+            order.max_sell_capacity, agent.personal_endowment, atol=1e-12
+        ), (
             f"Max sell capacity {order.max_sell_capacity} != inventory {agent.personal_endowment}"
         )
 
@@ -278,22 +290,38 @@ class TestMarketBudgetValidation:
         """Test that total market value is conserved during clearing."""
         # Create agents with different preferences for active trading
         agents = [
-            Agent(1, np.array([0.7, 0.3]), np.array([2.0, 0.5]), np.array([1.0, 1.0]), (0, 0)),
-            Agent(2, np.array([0.3, 0.7]), np.array([0.5, 2.0]), np.array([1.0, 1.0]), (0, 0)),
+            Agent(
+                1,
+                np.array([0.7, 0.3]),
+                np.array([2.0, 0.5]),
+                np.array([1.0, 1.0]),
+                (0, 0),
+            ),
+            Agent(
+                2,
+                np.array([0.3, 0.7]),
+                np.array([0.5, 2.0]),
+                np.array([1.0, 1.0]),
+                (0, 0),
+            ),
         ]
-        
+
         prices = np.array([1.0, 2.0])
-        
+
         # Total value before clearing
-        initial_total_value = sum(np.dot(prices, agent.total_endowment) for agent in agents)
-        
+        initial_total_value = sum(
+            np.dot(prices, agent.total_endowment) for agent in agents
+        )
+
         # Execute clearing
         result = execute_constrained_clearing(agents, prices)
-        
+
         # Apply trades and compute final value
         apply_trades_to_agents(agents, result.executed_trades)
-        final_total_value = sum(np.dot(prices, agent.total_endowment) for agent in agents)
-        
+        final_total_value = sum(
+            np.dot(prices, agent.total_endowment) for agent in agents
+        )
+
         # Value should be conserved exactly
         assert abs(initial_total_value - final_total_value) < 1e-12, (
             f"Value not conserved: initial={initial_total_value}, final={final_total_value}"
@@ -308,19 +336,21 @@ class TestMarketBudgetValidation:
             personal_endowment=np.array([1.0, 1.5]),
             position=(0, 0),
         )
-        
+
         prices = np.array([1.0, 1.5])
-        
+
         # Store initial wealth
         initial_wealth = np.dot(prices, agent.total_endowment)
-        
+
         # Execute clearing
         result = execute_constrained_clearing([agent], prices)
-        
+
         # Compute net value of trades for this agent
-        agent_trades = [t for t in result.executed_trades if t.agent_id == agent.agent_id]
+        agent_trades = [
+            t for t in result.executed_trades if t.agent_id == agent.agent_id
+        ]
         net_trade_value = sum(t.quantity * t.price for t in agent_trades)
-        
+
         # Net trade value should be close to zero (budget constraint)
         # Note: In single-agent case, there may be no trades, so value should be 0
         assert abs(net_trade_value) < FEASIBILITY_TOL, (
@@ -333,38 +363,50 @@ class TestDemandFunctionConsistency:
 
     def test_demand_order_consistency(self):
         """Test that order generation is consistent with agent.demand() method.
-        
+
         Uses simplified inventory model: agents load full inventory before trading.
         """
         agents = [
-            Agent(1, np.array([0.8, 0.2]), np.array([3.0, 4.0]), np.array([0.0, 0.0]), (0, 0)),  # Total [3, 4]
-            Agent(2, np.array([0.4, 0.6]), np.array([4.0, 3.0]), np.array([0.0, 0.0]), (0, 0)),  # Total [4, 3]
+            Agent(
+                1,
+                np.array([0.8, 0.2]),
+                np.array([3.0, 4.0]),
+                np.array([0.0, 0.0]),
+                (0, 0),
+            ),  # Total [3, 4]
+            Agent(
+                2,
+                np.array([0.4, 0.6]),
+                np.array([4.0, 3.0]),
+                np.array([0.0, 0.0]),
+                (0, 0),
+            ),  # Total [4, 3]
         ]
-        
+
         # SIMPLIFIED INVENTORY MODEL: Load full inventory for trading
         for agent in agents:
             agent.load_inventory_for_travel()
-        
+
         prices = np.array([1.0, 2.0])
-        
+
         orders = _generate_agent_orders(agents, prices)
-        
+
         for i, (agent, order) in enumerate(zip(agents, orders)):
             # Get agent's desired consumption from demand function
             desired_consumption = agent.demand(prices)
-            
+
             # Compute implied desired consumption from orders
             net_order = order.buy_orders - order.sell_orders
             implied_consumption = agent.personal_endowment + net_order
-            
+
             assert np.allclose(implied_consumption, desired_consumption, atol=1e-12), (
-                f"Agent {i+1}: implied consumption {implied_consumption} != "
+                f"Agent {i + 1}: implied consumption {implied_consumption} != "
                 f"demand function result {desired_consumption}"
             )
 
     def test_multiple_price_vectors_consistency(self):
         """Test consistency across different price vectors.
-        
+
         Uses simplified inventory model: agent loads full inventory before trading.
         """
         agent = Agent(
@@ -374,70 +416,74 @@ class TestDemandFunctionConsistency:
             personal_endowment=np.array([0.0, 0.0]),
             position=(0, 0),
         )
-        
+
         # SIMPLIFIED INVENTORY MODEL: Load full inventory for trading
         agent.load_inventory_for_travel()
-        
+
         price_vectors = [
             np.array([1.0, 1.0]),
             np.array([1.0, 2.0]),
             np.array([1.0, 0.5]),
             np.array([1.0, 3.0]),
         ]
-        
+
         for prices in price_vectors:
             orders = _generate_agent_orders([agent], prices)
             order = orders[0]
-            
+
             # Check consistency with demand function
             desired = agent.demand(prices)
             net_order = order.buy_orders - order.sell_orders
             implied_desired = agent.personal_endowment + net_order
-            
+
             assert np.allclose(implied_desired, desired, atol=1e-12), (
                 f"Inconsistency at prices {prices}: implied={implied_desired}, desired={desired}"
             )
 
     def test_wealth_effect_in_orders(self):
         """Test that order generation properly captures wealth effects.
-        
+
         Uses simplified inventory model: agents load full inventory before trading.
         """
         # Create two identical agents with different endowments (different wealth)
         alpha = np.array([0.5, 0.5])
-        
+
         # Poor agent - total endowment [1.5, 1.5]
         poor_agent = Agent(1, alpha, np.array([1.5, 1.5]), np.array([0.0, 0.0]), (0, 0))
-        
+
         # Rich agent - total endowment [4.5, 4.5]
         rich_agent = Agent(2, alpha, np.array([4.5, 4.5]), np.array([0.0, 0.0]), (0, 0))
-        
+
         # SIMPLIFIED INVENTORY MODEL: Load full inventory for trading
         poor_agent.load_inventory_for_travel()
         rich_agent.load_inventory_for_travel()
-        
+
         prices = np.array([1.0, 1.0])
-        
+
         # Generate orders
         poor_orders = _generate_agent_orders([poor_agent], prices)[0]
         rich_orders = _generate_agent_orders([rich_agent], prices)[0]
-        
+
         # Compute implied desired consumptions
-        poor_desired = poor_agent.personal_endowment + (poor_orders.buy_orders - poor_orders.sell_orders)
-        rich_desired = rich_agent.personal_endowment + (rich_orders.buy_orders - rich_orders.sell_orders)
-        
+        poor_desired = poor_agent.personal_endowment + (
+            poor_orders.buy_orders - poor_orders.sell_orders
+        )
+        rich_desired = rich_agent.personal_endowment + (
+            rich_orders.buy_orders - rich_orders.sell_orders
+        )
+
         # Rich agent should desire more consumption (wealth effect)
         assert np.all(rich_desired >= poor_desired), (
             f"Wealth effect not captured: rich={rich_desired}, poor={poor_desired}"
         )
-        
+
         # Verify against analytical demands
         poor_wealth = np.dot(prices, poor_agent.total_endowment)
         rich_wealth = np.dot(prices, rich_agent.total_endowment)
-        
+
         analytical_poor = alpha * poor_wealth / prices
         analytical_rich = alpha * rich_wealth / prices
-        
+
         assert np.allclose(poor_desired, analytical_poor, atol=1e-12)
         assert np.allclose(rich_desired, analytical_rich, atol=1e-12)
 
@@ -448,42 +494,64 @@ class TestMarketClearingEconomicProperties:
     def test_pareto_efficiency_tendency(self):
         """Test that market clearing moves toward Pareto efficient allocations."""
         # Create agents with complementary preferences (gains from trade)
-        agent1 = Agent(1, np.array([0.8, 0.2]), np.array([0.0, 0.0]), np.array([1.0, 5.0]), (0, 0))
-        agent2 = Agent(2, np.array([0.2, 0.8]), np.array([0.0, 0.0]), np.array([5.0, 1.0]), (0, 0))
-        
+        agent1 = Agent(
+            1, np.array([0.8, 0.2]), np.array([0.0, 0.0]), np.array([1.0, 5.0]), (0, 0)
+        )
+        agent2 = Agent(
+            2, np.array([0.2, 0.8]), np.array([0.0, 0.0]), np.array([5.0, 1.0]), (0, 0)
+        )
+
         agents = [agent1, agent2]
         prices = np.array([1.0, 1.0])
-        
+
         # Compute initial utilities
-        initial_utilities = [agent.utility(agent.personal_endowment) for agent in agents]
-        
+        initial_utilities = [
+            agent.utility(agent.personal_endowment) for agent in agents
+        ]
+
         # Execute clearing
         result = execute_constrained_clearing(agents, prices)
         apply_trades_to_agents(agents, result.executed_trades)
-        
+
         # Compute final utilities
         final_utilities = [agent.utility(agent.personal_endowment) for agent in agents]
-        
+
         # At least one agent should be better off (or both unchanged if no beneficial trades)
         if len(result.executed_trades) > 0:
             # If trades occurred, at least one agent should benefit
-            improvement = any(final_utilities[i] >= initial_utilities[i] for i in range(len(agents)))
-            assert improvement, f"No utility improvement despite trades: {initial_utilities} -> {final_utilities}"
+            improvement = any(
+                final_utilities[i] >= initial_utilities[i] for i in range(len(agents))
+            )
+            assert improvement, (
+                f"No utility improvement despite trades: {initial_utilities} -> {final_utilities}"
+            )
 
     def test_market_clearing_zero_excess_demand(self):
         """Test that clearing result has minimal excess demand."""
         agents = [
-            Agent(1, np.array([0.6, 0.4]), np.array([1.0, 0.0]), np.array([1.0, 1.0]), (0, 0)),
-            Agent(2, np.array([0.4, 0.6]), np.array([0.0, 1.0]), np.array([1.0, 1.0]), (0, 0)),
+            Agent(
+                1,
+                np.array([0.6, 0.4]),
+                np.array([1.0, 0.0]),
+                np.array([1.0, 1.0]),
+                (0, 0),
+            ),
+            Agent(
+                2,
+                np.array([0.4, 0.6]),
+                np.array([0.0, 1.0]),
+                np.array([1.0, 1.0]),
+                (0, 0),
+            ),
         ]
-        
+
         prices = np.array([1.0, 1.5])
-        
+
         result = execute_constrained_clearing(agents, prices)
-        
+
         # Unmet demand and supply should be small (near market clearing)
         total_unmet = np.sum(result.unmet_demand) + np.sum(result.unmet_supply)
-        
+
         # In a well-functioning market, unmet demand/supply should be minimal
         # (This tests that the clearing algorithm is actually clearing the market)
         assert total_unmet >= 0, "Unmet demand/supply cannot be negative"

@@ -348,7 +348,36 @@ def run_simulation(
 
         running = True
         while running:
-            frame = controller.update()
+            manual_frame = None
+            for event in pygame.event.get():  # type: ignore
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.KEYDOWN:
+                    mods = pygame.key.get_mods()
+                    if event.key == pygame.K_SPACE:
+                        controller.toggle_play()
+                    elif event.key == pygame.K_RIGHT:
+                        if mods & pygame.KMOD_SHIFT:
+                            manual_frame = controller.jump(10)
+                        else:
+                            manual_frame = controller.step_once()
+                    elif event.key == pygame.K_LEFT:
+                        if mods & pygame.KMOD_SHIFT:
+                            manual_frame = controller.jump(-10)
+                        else:
+                            manual_frame = controller.step_back()
+                    elif event.key == pygame.K_HOME:
+                        manual_frame = controller.goto(1)
+                    elif event.key == pygame.K_END:
+                        manual_frame = controller.goto(10**9)
+                    elif event.key == pygame.K_UP:
+                        controller.speed_up()
+                    elif event.key == pygame.K_DOWN:
+                        controller.slow_down()
+                    elif event.key in (pygame.K_ESCAPE, pygame.K_q):
+                        running = False
+
+            frame = manual_frame if manual_frame is not None else controller.update()
             if frame is not None:
                 state = stream.state  # sync external reference
                 try:
@@ -359,11 +388,8 @@ def run_simulation(
                     )  # type: ignore
                 except SystemExit:
                     running = False
-                    # Exit outer loop via running flag
-                # Snapshot capture (GUI path) after render
                 if (
                     snapshotter
-                    and frame is not None
                     and snapshot_every
                     and (frame.round % snapshot_every == 0)
                 ):
@@ -376,29 +402,13 @@ def run_simulation(
                         )  # type: ignore[arg-type]
                     except Exception:
                         pass
-                # Per-frame structured logging (deduplicated)
                 if run_logger is not None:
                     records = _build_round_log_records(state)
                     if records:
                         run_logger.log_round(records)  # type: ignore[arg-type]
-            # Event handling for controls
-            for event in pygame.event.get():  # type: ignore
-                if event.type == pygame.QUIT:
-                    running = False
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_SPACE:
-                        controller.toggle_play()
-                    elif event.key == pygame.K_RIGHT:
-                        controller.step_once()
-                    elif event.key == pygame.K_UP:
-                        controller.speed_up()
-                    elif event.key == pygame.K_DOWN:
-                        controller.slow_down()
-                    elif event.key in (pygame.K_ESCAPE, pygame.K_q):
-                        running = False
+
             if stream.state.round >= config.max_rounds:
                 controller.is_playing = False
-                # Keep window open until user closes or presses Esc/Q (remove stray break)
         state = stream.state
     else:
         for _ in range(config.max_rounds):
@@ -593,7 +603,38 @@ def main():
 
             running = True
             while running:
-                frame = controller.update()
+                manual_frame = None
+                for event in pygame.event.get():  # type: ignore
+                    if event.type == pygame.QUIT:
+                        running = False
+                    elif event.type == pygame.KEYDOWN:
+                        mods = pygame.key.get_mods()
+                        if event.key == pygame.K_SPACE:
+                            controller.toggle_play()
+                        elif event.key == pygame.K_RIGHT:
+                            manual_frame = (
+                                controller.jump(10)
+                                if mods & pygame.KMOD_SHIFT
+                                else controller.step_once()
+                            )
+                        elif event.key == pygame.K_LEFT:
+                            manual_frame = (
+                                controller.jump(-10)
+                                if mods & pygame.KMOD_SHIFT
+                                else controller.step_back()
+                            )
+                        elif event.key == pygame.K_HOME:
+                            manual_frame = controller.goto(1)
+                        elif event.key == pygame.K_END:
+                            manual_frame = controller.goto(10**9)
+                        elif event.key == pygame.K_UP:
+                            controller.speed_up()
+                        elif event.key == pygame.K_DOWN:
+                            controller.slow_down()
+                        elif event.key in (pygame.K_ESCAPE, pygame.K_q):
+                            running = False
+
+                frame = manual_frame if manual_frame is not None else controller.update()
                 if frame is not None and gui_renderer is not None:
                     try:
                         gui_renderer.render(
@@ -603,22 +644,7 @@ def main():
                         )  # type: ignore
                     except SystemExit:
                         running = False
-                for event in pygame.event.get():  # type: ignore
-                    if event.type == pygame.QUIT:
-                        running = False
-                    elif event.type == pygame.KEYDOWN:
-                        if event.key == pygame.K_SPACE:
-                            controller.toggle_play()
-                        elif event.key == pygame.K_RIGHT:
-                            controller.step_once()
-                        elif event.key == pygame.K_UP:
-                            controller.speed_up()
-                        elif event.key == pygame.K_DOWN:
-                            controller.slow_down()
-                        elif event.key in (pygame.K_ESCAPE, pygame.K_q):
-                            running = False
                 if frame is None and not controller.is_playing:
-                    # End reached while paused or after finishing
                     running = False
             print("Replay complete.")
             return 0

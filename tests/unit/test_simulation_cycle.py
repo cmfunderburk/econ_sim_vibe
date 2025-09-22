@@ -33,7 +33,8 @@ def test_agents_follow_home_market_cycle():
     # First round should load inventory for travel
     state = run_simulation_round(state, config)
     assert all(
-        state.agent_phases[agent.agent_id] in {AgentPhase.TO_MARKET, AgentPhase.AT_MARKET}
+        state.agent_phases[agent.agent_id]
+        in {AgentPhase.TO_MARKET, AgentPhase.AT_MARKET}
         for agent in state.agents
     )
     assert all(np.allclose(agent.home_endowment, 0.0) for agent in state.agents)
@@ -45,9 +46,7 @@ def test_agents_follow_home_market_cycle():
         if all(
             state.agent_phases[agent.agent_id] == AgentPhase.HOME_PREP
             for agent in state.agents
-        ) and all(
-            np.allclose(agent.personal_endowment, 0.0) for agent in state.agents
-        ):
+        ) and all(np.allclose(agent.personal_endowment, 0.0) for agent in state.agents):
             returned_home = True
             break
 

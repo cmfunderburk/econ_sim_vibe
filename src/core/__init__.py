@@ -10,6 +10,24 @@ This module contains the fundamental building blocks for the economic simulation
 # Import core classes
 from .agent import Agent
 from .types import Trade, SimulationState, MarketResult
+from .simulation import (
+    SimulationConfig,
+    RuntimeSimulationState,
+    initialize_runtime_state,
+    run_round,
+    AgentPhase,
+)
 
 # Export classes for easy import
-__all__ = ["Agent", "Trade", "SimulationState", "MarketResult"]
+__all__ = [
+    "Agent",
+    "Trade",
+    "SimulationState",
+    "MarketResult",
+    # Runtime API
+    "SimulationConfig",
+    "RuntimeSimulationState",
+    "initialize_runtime_state",
+    "run_round",
+    "AgentPhase",
+]

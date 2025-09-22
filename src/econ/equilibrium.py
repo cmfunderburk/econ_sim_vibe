@@ -1,3 +1,119 @@
+"""Walrasian equilibrium solver (minimal implementation for tests).
+
+The solver targets price vectors p with p[0] = 1 (numéraire) such that
+aggregate excess demand (excluding the numéraire good) is ~0 within
+SOLVER_TOL. Handles edge cases (no participants, insufficient goods).
+"""
+from __future__ import annotations
+
+from typing import List, Optional, Tuple
+import numpy as np
+from dataclasses import dataclass
+
+try:
+    from ..constants import SOLVER_TOL, NUMERAIRE_GOOD  # type: ignore
+except Exception:
+    from constants import SOLVER_TOL, NUMERAIRE_GOOD  # type: ignore
+
+try:  # SciPy optional; tests rely on its presence but guard anyway
+    from scipy.optimize import fsolve
+except Exception:  # pragma: no cover - fallback only if SciPy missing
+    fsolve = None  # type: ignore
+
+
+def _aggregate_excess_demand(prices: np.ndarray, agents: List["Agent"]) -> np.ndarray:
+    n_goods = prices.size
+    z = np.zeros(n_goods)
+    for a in agents:
+        z += a.excess_demand(prices)
+    return z
+
+
+def _initial_prices(n_goods: int) -> np.ndarray:
+    p = np.ones(n_goods)
+    p[NUMERAIRE_GOOD] = 1.0
+    return p
+
+
+def solve_walrasian_equilibrium(
+    agents: List["Agent"],
+) -> Tuple[Optional[np.ndarray], float, float, str]:
+    """Compute Walrasian equilibrium prices for Cobb-Douglas agents.
+
+    Returns
+    -------
+    (prices, z_rest_norm, walras_dot, status)
+      prices : np.ndarray or None
+        Price vector with p[0]=1 on success, else None for no participants.
+      z_rest_norm : float
+        Infinity norm of excess demand excluding the numéraire good.
+      walras_dot : float
+        |p·Z(p)| sanity check value.
+      status : str
+        'converged', 'no_participants', 'poor_convergence', 'failed',
+        or edge-case labels used in tests.
+    """
+    if not agents:
+        return None, 0.0, 0.0, "no_participants"
+
+    n_goods = agents[0].alpha.size
+    if n_goods < 2:
+        # Degenerate single-good economy (prices not meaningful)
+        p = _initial_prices(n_goods)
+        return p, 0.0, 0.0, "insufficient_goods"
+
+    # Filter out zero wealth agents to avoid singular systems
+    viable = []
+    for a in agents:
+        if np.dot(np.ones(n_goods), a.total_endowment) > 0.0:
+            viable.append(a)
+    if len(viable) < 1:
+        return None, 0.0, 0.0, "insufficient_viable_agents"
+
+    agents = viable
+
+    p0 = _initial_prices(n_goods)
+
+    def system(p_rest: np.ndarray) -> np.ndarray:
+        prices = p0.copy()
+        prices[1:] = p_rest
+        z = _aggregate_excess_demand(prices, agents)
+        return z[1:]  # Rest-goods excess demand
+
+    if fsolve is None:
+        # Very naive tâtonnement fallback (should not trigger in CI)
+        p_rest = np.ones(n_goods - 1)
+        for _ in range(500):
+            F = system(p_rest)
+            if np.linalg.norm(F, np.inf) < SOLVER_TOL:
+                break
+            p_rest = np.maximum(p_rest * (1 + 0.1 * F), 1e-8)
+        prices = p0.copy()
+        prices[1:] = p_rest
+    else:
+        p_rest_guess = np.ones(n_goods - 1)
+        try:
+            p_rest, info, ier, msg = fsolve(system, p_rest_guess, full_output=True)
+            prices = p0.copy()
+            prices[1:] = p_rest
+        except Exception:  # pragma: no cover - defensive
+            return None, 0.0, 0.0, "failed"
+
+    # Normalization enforcement (numéraire)
+    prices[0] = 1.0
+
+    Z_full = _aggregate_excess_demand(prices, agents)
+    z_rest_norm = float(np.linalg.norm(Z_full[1:], ord=np.inf))
+    walras_dot = float(abs(np.dot(prices, Z_full)))
+
+    if z_rest_norm < SOLVER_TOL:
+        status = "converged"
+    else:
+        status = "poor_convergence"
+
+    return prices, z_rest_norm, walras_dot, status
+
+__all__ = ["solve_walrasian_equilibrium"]
 """
 Walrasian equilibrium solver for the economic simulation.
 
@@ -24,15 +140,25 @@ p₂, p₃, ..., p_n using the excess demand system Z_{2:n}(p) = 0.
 
 import numpy as np
 import scipy.optimize
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Callable, Dict, Any
 import logging
 
 # Import constants from centralized source
 try:
-    from constants import SOLVER_TOL, FEASIBILITY_TOL, NUMERAIRE_GOOD, MIN_ALPHA
+    from constants import (  # noqa: F401
+        SOLVER_TOL,
+        FEASIBILITY_TOL,
+        NUMERAIRE_GOOD,
+        MIN_ALPHA,
+    )
 except ImportError:
     # Fallback for different execution contexts
-    from src.constants import SOLVER_TOL, FEASIBILITY_TOL, NUMERAIRE_GOOD, MIN_ALPHA
+    from src.constants import (  # noqa: F401
+        SOLVER_TOL,
+        FEASIBILITY_TOL,
+        NUMERAIRE_GOOD,
+        MIN_ALPHA,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -96,9 +222,73 @@ def compute_excess_demand(prices: np.ndarray, agents: List) -> np.ndarray:
     return excess_demand
 
 
+def _tatonnement(
+    excess_fn: Callable[[np.ndarray], np.ndarray],
+    p_rest_initial: np.ndarray,
+    max_iterations: int = 500,
+    step_size: float = 0.2,
+    damping: float = 0.9,
+    min_step: float = 1e-5,
+) -> Tuple[np.ndarray, Dict[str, Any]]:
+    """Simple adaptive tâtonnement in rest-goods space.
+
+    Price update in rest-goods parameterization (p1 ≡ 1):
+        p_rest^{t+1} = max(ε, p_rest^t * (1 + step_size * Z_rest(p)))
+
+    Multiplicative update preserves positivity; adaptive damping reduces
+    step_size if residual norm increases.
+
+    Args:
+        excess_fn: Function returning Z_rest(p_rest)
+        p_rest_initial: Initial rest-goods prices (positive)
+        max_iterations: Hard iteration cap
+        step_size: Initial multiplicative step scale
+        damping: Factor to scale step_size when residual worsens
+        min_step: Minimum allowed step size before giving up
+
+    Returns:
+        (p_rest, diagnostics) where diagnostics includes iterations, final_norm,
+        path list of norms, and final step_size.
+    """
+    eps = 1e-10
+    p = np.maximum(p_rest_initial.copy(), eps)
+    norms = []
+    current_z = excess_fn(p)
+    current_norm = float(np.linalg.norm(current_z, ord=np.inf))
+    norms.append(current_norm)
+    it = 0
+
+    while it < max_iterations and current_norm > SOLVER_TOL and step_size >= min_step:
+        proposal = np.maximum(p * (1.0 + step_size * current_z), eps)
+        z_new = excess_fn(proposal)
+        norm_new = float(np.linalg.norm(z_new, ord=np.inf))
+        if norm_new <= current_norm:  # Accept improvement
+            p = proposal
+            current_z = z_new
+            current_norm = norm_new
+            norms.append(current_norm)
+            # Mild acceleration when consistently improving
+            if len(norms) >= 3 and norms[-1] < norms[-2] < norms[-3]:
+                step_size = min(step_size * 1.05, 1.0)
+        else:
+            # Backtrack (dampen step) and retry
+            step_size *= damping
+        it += 1
+
+    diagnostics = {
+        "iterations": it,
+        "final_norm": current_norm,
+        "norm_path": norms,
+        "final_step_size": step_size,
+    }
+    return p, diagnostics
+
+
 def solve_walrasian_equilibrium(
-    agents: List, initial_guess: Optional[np.ndarray] = None
-) -> Tuple[np.ndarray, float, float, str]:
+    agents: List[Any],
+    initial_guess: Optional[np.ndarray] = None,
+    enable_fallback: bool = True,
+) -> Tuple[Optional[np.ndarray], float, float, str]:
     """
     Solve for market-clearing prices with numéraire normalization.
 
@@ -156,7 +346,7 @@ def solve_walrasian_equilibrium(
 
         Concatenates p₁ = 1.0 with rest prices and returns excess demand
         for goods 2 through n only (excludes numéraire).
-        
+
         Filters agents dynamically based on current price iterate to prevent
         misclassification in heterogeneous-price economies.
         """
@@ -167,17 +357,19 @@ def solve_walrasian_equilibrium(
             current_viable_agents = []
             for agent in agents:
                 omega_total = agent.home_endowment + agent.personal_endowment
-                wealth = np.dot(prices, omega_total)  # Use current prices, not uniform/guess
-                
+                wealth = np.dot(
+                    prices, omega_total
+                )  # Use current prices, not uniform/guess
+
                 if wealth > FEASIBILITY_TOL:
                     current_viable_agents.append(agent)
                 # Note: Don't log warnings here as this runs every iteration
-            
+
             # Require minimum viable agents for meaningful equilibrium
             if len(current_viable_agents) < 2:
                 # Return large residual to signal infeasible system to optimizer
                 return np.full(n_goods - 1, 1e6)
-            
+
             excess_demand = compute_excess_demand(prices, current_viable_agents)
             return excess_demand[1:]  # Return only rest goods (exclude numéraire)
         except Exception as e:
@@ -192,35 +384,39 @@ def solve_walrasian_equilibrium(
         p_rest_initial = initial_guess.copy()
 
     # Solve using scipy
+    solver_method = "fsolve"
+    tatonnement_info: Dict[str, Any] = {}
     try:
-        p_rest_solution = scipy.optimize.fsolve(
+        # Request full_output for potential future diagnostics; take first element (solution vector)
+        p_rest_solution_full = scipy.optimize.fsolve(
             excess_demand_rest_goods,
             p_rest_initial,
             xtol=SOLVER_TOL,
             maxfev=1000,  # Prevent infinite loops
+            full_output=False,
         )
-
-        # Reconstruct full price vector
+        # Ensure ndarray form
+        p_rest_solution = np.asarray(p_rest_solution_full, dtype=float)
         prices = np.concatenate([[1.0], p_rest_solution])
 
         # Price positivity guarantees - project prices to ensure positive floor
         # Economic interpretation: Negative prices are never meaningful in Walrasian systems
         # Apply floor to all non-numéraire prices while preserving numéraire constraint
         MIN_PRICE_FLOOR = 1e-6  # Small positive floor
-        
+
         if np.any(prices[1:] <= 0):
             logger.warning(
                 f"Negative/zero prices detected: {prices}, applying positivity projection"
             )
             # Floor projection for non-numéraire goods
             prices[1:] = np.maximum(prices[1:], MIN_PRICE_FLOOR)
-            
+
             # Renormalize to maintain proper relative price structure if needed
             # For now, simple floor projection is sufficient
-            
+
         # Compute convergence metrics
         z_rest_residual = excess_demand_rest_goods(p_rest_solution)
-        z_rest_norm = np.linalg.norm(z_rest_residual, ord=np.inf)
+        z_rest_norm = float(np.linalg.norm(z_rest_residual, ord=np.inf))
 
         # Walras' Law validation (sanity check) - recompute viable agents for final prices
         final_viable_agents = []
@@ -229,7 +425,7 @@ def solve_walrasian_equilibrium(
             wealth = np.dot(prices, omega_total)
             if wealth > FEASIBILITY_TOL:
                 final_viable_agents.append(agent)
-        
+
         excess_demand_full = compute_excess_demand(prices, final_viable_agents)
         walras_dot = abs(np.dot(prices, excess_demand_full))
 
@@ -237,13 +433,48 @@ def solve_walrasian_equilibrium(
         if z_rest_norm < SOLVER_TOL:
             status = "converged"
             logger.info(
-                f"Solver converged: ||Z_rest||_∞={z_rest_norm:.2e}, Walras={walras_dot:.2e}"
+                f"Solver converged ({solver_method}): ||Z_rest||_∞={z_rest_norm:.2e}, Walras={walras_dot:.2e}"
             )
         else:
             status = "poor_convergence"
             logger.warning(
-                f"Poor convergence: ||Z_rest||_∞={z_rest_norm:.2e} >= {SOLVER_TOL}"
+                f"Poor convergence ({solver_method}): ||Z_rest||_∞={z_rest_norm:.2e} >= {SOLVER_TOL}"
             )
+
+            # Attempt fallback tatonnement if enabled
+            if enable_fallback:
+                logger.info("Attempting tâtonnement fallback after poor convergence")
+
+                def _rest_only_excess(p_rest_inner: np.ndarray) -> np.ndarray:
+                    return excess_demand_rest_goods(p_rest_inner)
+
+                p_tat, tatonnement_info = _tatonnement(
+                    _rest_only_excess, p_rest_solution, max_iterations=800
+                )
+                tat_residual = _rest_only_excess(p_tat)
+                tat_norm = float(np.linalg.norm(tat_residual, ord=np.inf))
+                if tat_norm < z_rest_norm:  # Use improved solution
+                    prices = np.concatenate([[1.0], p_tat])
+                    z_rest_residual = tat_residual
+                    z_rest_norm = tat_norm
+                    # Reuse existing status labels to maintain test compatibility
+                    status = (
+                        "converged" if z_rest_norm < SOLVER_TOL else "poor_convergence"
+                    )
+                    logger.warning(
+                        "Fallback tâtonnement %s: ||Z_rest||_∞=%.2e (initial %.2e) after %d iters (final step %.3g)",
+                        status,
+                        z_rest_norm,
+                        tatonnement_info.get("norm_path", [np.nan])[0],
+                        tatonnement_info.get("iterations", -1),
+                        tatonnement_info.get("final_step_size", float("nan")),
+                    )
+                else:
+                    logger.warning(
+                        "Fallback tâtonnement provided no improvement (%.2e >= %.2e)",
+                        tat_norm,
+                        z_rest_norm,
+                    )
 
         # Sanity check: Walras' Law should hold regardless of convergence
         if walras_dot > SOLVER_TOL:
@@ -252,14 +483,13 @@ def solve_walrasian_equilibrium(
             )
 
         return prices, z_rest_norm, walras_dot, status
-
-    except Exception as e:
+    except Exception as e:  # Broad catch ensures failure surfaces cleanly
         logger.error(f"Solver failed: {e}")
         return None, np.inf, np.inf, "failed"
 
 
 def validate_equilibrium_invariants(
-    prices: np.ndarray, agents: List, excess_demand: np.ndarray
+    prices: np.ndarray, agents: List[Any], excess_demand: np.ndarray
 ) -> bool:
     """
     Validate critical economic invariants for equilibrium solution.
@@ -307,7 +537,7 @@ def validate_equilibrium_invariants(
 
 
 def solve_equilibrium(
-    agents: List, normalization: str = "good_1", endowment_scope: str = "total"
+    agents: List[Any], normalization: str = "good_1", endowment_scope: str = "total"
 ) -> Tuple[Optional[np.ndarray], float, float, str]:
     """
     High-level interface for equilibrium solving with configurable options.

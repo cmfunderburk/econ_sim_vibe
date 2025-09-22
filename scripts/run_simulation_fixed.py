@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
-"""
-Main simulation runner script.
+"""DEPRECATED MODULE (2025-09-21)
 
-Usage:
-    python scripts/run_simulation.py --config config/edgeworth.yaml --seed 42
-    python scripts/run_simulation.py --config config/zero_movement_cost.yaml --seed 123 --output results/
+This legacy runner has been superseded by `scripts/run_simulation.py` which now
+delegates to the library runtime API in `src/core/simulation.py`.
+
+Why deprecated:
+- Duplicated SimulationState / initialization logic
+- Divergent order generation semantics
+- Lacked structured logging integration
+
+Retained temporarily to avoid breaking any unpublished local workflows; direct
+execution now raises a RuntimeError guiding users to the supported CLI.
+
+Planned removal after packaging & console entry points are in place.
 """
 
 import argparse
@@ -325,5 +333,7 @@ def main():
     print(f"Final travel costs: {state.agent_travel_costs}")
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover - explicit runtime guard
+    raise RuntimeError(
+        "scripts/run_simulation_fixed.py is deprecated. Use scripts/run_simulation.py instead."
+    )

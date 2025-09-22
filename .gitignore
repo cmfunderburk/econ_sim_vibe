@@ -1,4 +1,79 @@
-# Byte-compiled / optimized / DLL files
+###############################
+# Core Python ignores
+###############################
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.env/
+.venv/
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+
+# Coverage / test artifacts
+.pytest_cache/
+.coverage*
+coverage.xml
+htmlcov/
+
+# Logs & debug
+*.log
+*.tmp
+*.swp
+
+# Jupyter / notebooks
+.ipynb_checkpoints/
+
+# IDE / tooling
+.vscode/
+.idea/
+
+# Project runtime artifacts
+results/
+runs/
+*.jsonl
+*.parquet
+*_round_log.jsonl
+*_metadata.json
+*_integrity.json
+*_geometry.json
+
+# Snapshots / exports
+snapshots/
+frames/
+
+# Temporary planning / notes (retain canonical docs in docs/)
+NEXT STEPS*.
+*.bak
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Cache directories for optional libs
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+
+# Local analysis artifacts
+analysis_outputs/
+profiling_reports/
+
+# Generated CSV/exports
+*.csv
+
+# Allow committed examples (whitelist pattern) – create examples/ if needed
+!examples/**
+
+###############################
+# End .gitignore
+################################ Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class

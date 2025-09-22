@@ -1,10 +1,106 @@
+"""Spatial grid primitives for movement tests.
+
+Implements a simple rectangular grid with:
+ - Position dataclass (hashable)
+ - Grid storing agent positions
+ - Helper methods used by unit tests: add_agent, get_position,
+   move_agent_toward_position (single greedy step), marketplace center
+   computation, and move_agent_toward_marketplace (no-op if already inside).
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Dict, Tuple
+
+
+@dataclass(frozen=True)
+class Position:
+    x: int
+    y: int
+
+
+class Grid:
+    def __init__(self, width: int, height: int, marketplace_width: int, marketplace_height: int) -> None:
+        if width <= 0 or height <= 0:
+            raise ValueError("Grid dimensions must be positive")
+        self.width = width
+        self.height = height
+        self.marketplace_width = marketplace_width
+        self.marketplace_height = marketplace_height
+        self._positions: Dict[int, Position] = {}
+
+    # ------------------------------------------------------------------
+    # Marketplace geometry
+    # ------------------------------------------------------------------
+    def get_marketplace_center(self) -> Position:
+        return Position(self.width // 2, self.height // 2)
+
+    def _marketplace_bounds(self) -> Tuple[int, int, int, int]:
+        cx, cy = self.get_marketplace_center()
+        half_w = self.marketplace_width // 2
+        half_h = self.marketplace_height // 2
+        return cx - half_w, cx + half_w, cy - half_h, cy + half_h
+
+    def is_inside_marketplace(self, pos: Position) -> bool:
+        min_x, max_x, min_y, max_y = self._marketplace_bounds()
+        return (min_x <= pos.x <= max_x) and (min_y <= pos.y <= max_y)
+
+    # ------------------------------------------------------------------
+    # Agent position management
+    # ------------------------------------------------------------------
+    def add_agent(self, agent_id: int, position: Position) -> None:
+        if not (0 <= position.x < self.width and 0 <= position.y < self.height):
+            raise ValueError("Agent position out of bounds")
+        self._positions[agent_id] = position
+
+    def get_position(self, agent_id: int) -> Position:
+        return self._positions[agent_id]
+
+    # ------------------------------------------------------------------
+    # Movement helpers
+    # ------------------------------------------------------------------
+    def move_agent_toward_position(self, agent_id: int, target: Position) -> int:
+        if not (0 <= target.x < self.width and 0 <= target.y < self.height):
+            raise ValueError("Target position out of bounds")
+        current = self._positions[agent_id]
+        if current == target:
+            return 0
+        # Greedy Manhattan step: prioritize x movement then y (lexicographic)
+        dx = 0
+        if target.x > current.x:
+            dx = 1
+        elif target.x < current.x:
+            dx = -1
+        else:
+            dy = 0
+            if target.y > current.y:
+                dy = 1
+            elif target.y < current.y:
+                dy = -1
+            new_pos = Position(current.x, current.y + dy)
+            self._positions[agent_id] = new_pos
+            return 1 if dy != 0 else 0
+        # If we moved in x we do not move in y this step
+        new_pos = Position(current.x + dx, current.y)
+        self._positions[agent_id] = new_pos
+        return 1
+
+    def move_agent_toward_marketplace(self, agent_id: int) -> int:
+        pos = self._positions[agent_id]
+        if self.is_inside_marketplace(pos):
+            return 0
+        # Choose nearest point inside marketplace: move toward center
+        center = self.get_marketplace_center()
+        return self.move_agent_toward_position(agent_id, center)
+
+__all__ = ["Grid", "Position"]
 """Spatial grid implementation for agent movement and marketplace detection.
 
 This module provides the spatial infrastructure for Phase 2 of the economic simulation,
 including agent positioning, movement mechanics, and marketplace access detection.
 """
 
-from typing import Dict, List, Tuple, Set, Optional, Any
+from typing import Dict, List, Set, Optional, Any
 from dataclasses import dataclass
 import random
 
