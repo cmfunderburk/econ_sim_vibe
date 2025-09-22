@@ -83,7 +83,9 @@ class AgentOrder:
     buy_orders: np.ndarray
     sell_orders: np.ndarray
     max_sell_capacity: np.ndarray
-    budget: float = 0.0
+    budget: float = 0.0  # Travel-cost adjusted wealth (used for TOTAL_WEALTH cap)
+    total_wealth: float = 0.0  # Raw total wealth p·ω_total
+    adjusted_wealth: float = 0.0  # After travel cost deduction (if any)
 
     def __post_init__(self):
         """Validate order consistency."""
@@ -110,7 +112,10 @@ class AgentOrder:
 
 
 def _generate_agent_orders(
-    agents: List, prices: np.ndarray, travel_costs: Optional[Dict[int, float]] = None
+    agents: List,
+    prices: np.ndarray,
+    travel_costs: Optional[Dict[int, float]] = None,
+    financing_mode: FinancingMode = FinancingMode.PERSONAL,
 ) -> List[AgentOrder]:
     """Generate buy/sell orders for all marketplace agents.
 
@@ -128,16 +133,25 @@ def _generate_agent_orders(
     Returns:
         List of AgentOrder objects with buy/sell quantities
 
-    Notes:
-        - Agents optimize based on personal endowment wealth (what they brought to market)
-        - Buy orders: desired quantity minus current personal inventory
-        - Sell orders: current personal inventory minus desired quantity
-        - Both are clipped to non-negative values
-        - Personal inventory serves as hard constraint on sell capacity
-        - Optional travel_costs deduct budget-side wealth before computing demand
+        Notes:
+                Financing semantics:
+                - PERSONAL (default): Pure exchange financing. Enforce per-round value feasibility
+                    p·buys ≤ p·sells. Buy orders are scaled down if needed. Matches existing behavior.
+                - TOTAL_WEALTH: Agents may finance buys up to their travel-cost adjusted total wealth
+                    even if they do not sell goods this round (relaxes barter constraint). Sells remain
+                    constrained by personal inventory. Value feasibility check becomes p·(buys - sells) ≤ adjusted_wealth.
+
+                Common mechanics:
+                - Desired demand computed from adjusted wealth (travel cost deduction if enabled)
+                - Net orders split into non-negative buy/sell arrays
+                - Sells capped by personal inventory snapshot
+                - AgentOrder stores both raw total_wealth and adjusted_wealth for logging
     """
     orders: List[AgentOrder] = []
     n_goods = len(prices)
+
+    import os
+    enable_travel_budget = os.environ.get("ECON_ENABLE_TRAVEL_BUDGET", "1") == "1"
 
     for agent in agents:
         # Current personal inventory (tradeable at marketplace)
@@ -146,12 +160,13 @@ def _generate_agent_orders(
         # Wealth from TOTAL endowment per SPECIFICATION.md
         total_wealth = float(np.dot(prices, agent.total_endowment))
 
-        # Apply optional travel-cost deduction if provided
+        # Travel-cost adjusted budget (Phase 2 spec): w_i = max(0, p·ω_total - κ d_i)
+        # Gated by ENV flag to allow backward-compatible behavior during rollout.
         travel_cost = 0.0
-        if travel_costs and agent.agent_id in travel_costs:
+        if enable_travel_budget and travel_costs and agent.agent_id in travel_costs:
             travel_cost = float(travel_costs[agent.agent_id])
 
-        adjusted_wealth = max(0.0, total_wealth - travel_cost)
+        adjusted_wealth = max(0.0, total_wealth - travel_cost) if enable_travel_budget else total_wealth
 
         # Compute optimal Cobb-Douglas demand using adjusted wealth
         if adjusted_wealth > FEASIBILITY_TOL:
@@ -173,25 +188,44 @@ def _generate_agent_orders(
         # Ensure sell orders don't exceed inventory
         sell_orders = np.minimum(sell_orders, max_sell_capacity)
 
-        # Budget constraint: p·buy ≤ p·sell (pure exchange constraint)
-        # With simplified inventory model, agents carry full inventory so this is enforceable
         buy_value = float(np.dot(prices, buy_orders))
         sell_value = float(np.dot(prices, sell_orders))
-        
-        if buy_value > sell_value + FEASIBILITY_TOL:
-            # Scale down buy orders to respect budget constraint
-            if sell_value > FEASIBILITY_TOL:
-                scaling_factor = sell_value / buy_value
-                buy_orders *= scaling_factor
-                logger.debug(
-                    f"Agent {agent.agent_id}: scaled buy orders by {scaling_factor:.4f}"
-                )
-            else:
-                # Cannot buy anything if not selling anything of value
-                buy_orders = np.zeros_like(buy_orders)
-                logger.debug(
-                    f"Agent {agent.agent_id}: no sell value, clearing all buy orders"
-                )
+
+        if financing_mode == FinancingMode.PERSONAL:
+            # Pure exchange: enforce p·buys ≤ p·sells
+            if buy_value > sell_value + FEASIBILITY_TOL:
+                if sell_value > FEASIBILITY_TOL:
+                    scaling_factor = sell_value / buy_value
+                    buy_orders *= scaling_factor
+                    buy_value = float(np.dot(prices, buy_orders))
+                    logger.debug(
+                        f"Agent {agent.agent_id}: scaled buy orders by {scaling_factor:.4f} (PERSONAL mode)"
+                    )
+                else:
+                    buy_orders = np.zeros_like(buy_orders)
+                    buy_value = 0.0
+                    logger.debug(
+                        f"Agent {agent.agent_id}: no sell value, clearing buy orders (PERSONAL mode)"
+                    )
+        else:  # TOTAL_WEALTH
+            # Allow net positive buy value up to adjusted wealth cap
+            net_value = buy_value - sell_value
+            if net_value > adjusted_wealth + FEASIBILITY_TOL:
+                # Scale buys to satisfy p·(buys - sells) ≤ adjusted_wealth
+                # Solve scaling_factor * buy_value - sell_value = adjusted_wealth
+                if buy_value > FEASIBILITY_TOL:
+                    scaling_factor = (adjusted_wealth + sell_value) / buy_value
+                    scaling_factor = max(0.0, min(1.0, scaling_factor))
+                    buy_orders *= scaling_factor
+                    logger.debug(
+                        f"Agent {agent.agent_id}: scaled buy orders by {scaling_factor:.4f} (TOTAL_WEALTH mode)"
+                    )
+                else:
+                    # Degenerate case - clear
+                    buy_orders = np.zeros_like(buy_orders)
+                    logger.debug(
+                        f"Agent {agent.agent_id}: cleared buy orders (degenerate net value) in TOTAL_WEALTH mode"
+                    )
 
         orders.append(
             AgentOrder(
@@ -200,11 +234,13 @@ def _generate_agent_orders(
                 sell_orders=sell_orders,
                 max_sell_capacity=max_sell_capacity,
                 budget=float(adjusted_wealth),
+                total_wealth=float(total_wealth),
+                adjusted_wealth=float(adjusted_wealth),
             )
         )
 
         logger.debug(
-            f"Agent {agent.agent_id}: total_wealth={total_wealth:.4f}, "
+            f"Agent {agent.agent_id} ({financing_mode.value}): total_wealth={total_wealth:.4f}, "
             f"adjusted_wealth={adjusted_wealth:.4f}, desired={desired_quantities}, "
             f"current={current_personal}, "
             f"buy={buy_orders}, sell={sell_orders}"
@@ -449,23 +485,35 @@ def _validate_clearing_invariants(
         executed_buys = executed_buys_dict[agent_id]
         executed_sells = executed_sells_dict[agent_id]
 
-        # Value feasibility: agent's net trade value should not exceed their total wealth
-        buy_value = np.dot(prices, executed_buys)
-        sell_value = np.dot(prices, executed_sells)
-        
-        # The agent's total wealth is p·ω_total, and they are exchanging net_trade amounts
-        # Net trade value = buy_value - sell_value should be feasible given their wealth
+        buy_value = float(np.dot(prices, executed_buys))
+        sell_value = float(np.dot(prices, executed_sells))
         net_trade_value = buy_value - sell_value
-        
-        # Find the agent object to get their total wealth
-        # Note: In a production system, total wealth would be passed to this function
-        # For now, we'll allow reasonable net trade values (this is a placeholder constraint)
-        # TODO: Pass agent total endowments to this function for proper wealth validation
-        max_reasonable_net_trade = 1000.0  # Large but finite bound to prevent obvious errors
-        
-        assert abs(net_trade_value) <= max_reasonable_net_trade, (
-            f"Agent {agent_id} unreasonable net trade value: {net_trade_value:.6f}"
-        )
+
+        if financing_mode == FinancingMode.PERSONAL:
+            # Strict barter value feasibility; allow tiny numerical jitter beyond FEASIBILITY_TOL
+            if not (buy_value <= sell_value + FEASIBILITY_TOL):
+                # Permit extremely small relative overshoot due to floating rounding (<= 1e-12 absolute or 1e-10 relative)
+                abs_excess = buy_value - sell_value
+                rel_excess = abs_excess / max(1e-15, sell_value)
+                # Accept extremely small noise: absolute <=5e-10 or relative <=5e-10
+                if abs_excess <= 5e-10 or rel_excess <= 5e-10:
+                    logger.debug(
+                        "Value feasibility near-equality accepted (PERSONAL): agent=%s buys=%.12f sells=%.12f abs_excess=%.3e rel_excess=%.3e",
+                        agent_id,
+                        buy_value,
+                        sell_value,
+                        abs_excess,
+                        rel_excess,
+                    )
+                else:
+                    raise AssertionError(
+                        f"Agent {agent_id} value feasibility violated (PERSONAL): buys={buy_value:.6f} sells={sell_value:.6f} excess={abs_excess:.3e}"
+                    )
+        else:  # TOTAL_WEALTH mode
+            # Allow positive net trade financed by adjusted wealth budget
+            assert net_trade_value <= order.budget + FEASIBILITY_TOL, (
+                f"Agent {agent_id} financing exceeded: net={net_trade_value:.6f} budget={order.budget:.6f}"
+            )
 
         # Inventory constraints: sells ≤ personal inventory at entry
         inventory_violation = executed_sells - order.max_sell_capacity
@@ -600,7 +648,12 @@ def execute_constrained_clearing(
     n_goods = len(prices)
 
     # Step 1: Generate agent orders (apply travel-cost adjustments when provided)
-    orders = _generate_agent_orders(agents, prices, travel_costs=travel_costs)
+    orders = _generate_agent_orders(
+        agents,
+        prices,
+        travel_costs=travel_costs,
+        financing_mode=financing_mode,
+    )
 
     # Step 2: Compute market totals
     total_buys, total_sells = _compute_market_totals(orders)

@@ -46,7 +46,7 @@ LOGGER = logging.getLogger(__name__)
 
 # Increment only on breaking (non-backward-compatible) changes
 SCHEMA_VERSION = (
-    "1.3.0"  # Added spatial distance fidelity columns (Step D) – additive
+    "1.4.1"  # Added solver metrics fields (solver_*), retaining 1.4.0 wealth/financing additions (additive bump)
 )
 # Schema Evolution Guidance:
 # - Bump minor version for additive, backward-compatible column additions.
@@ -113,7 +113,9 @@ class RoundLogRecord:
     ration_unmet_supply: Optional[List[float]] = None
 
     wealth_travel_cost: float = 0.0
-    wealth_effective_budget: Optional[float] = None  # adjusted wealth if available
+    wealth_effective_budget: Optional[float] = None  # adjusted wealth if available (travel-cost adjusted, mode-dependent)
+    wealth_total_endowment_value: Optional[float] = None  # p·ω_total (pre travel cost)
+    wealth_travel_adjusted_total: Optional[float] = None  # max(0, p·ω_total - κ d)
 
     utility: Optional[float] = None  # agent utility (total_endowment bundle)
 
@@ -125,6 +127,17 @@ class RoundLogRecord:
     spatial_avg_distance_round: Optional[float] = None  # average distance among all agents this round
     spatial_initial_max_distance: Optional[int] = None  # baseline max distance at t=0
     # Future: ev_round, liquidity_gap, etc.
+
+    # --- Solver diagnostics (schema 1.4.1 additive) ---
+    solver_status: Optional[str] = None  # status label ('converged', 'poor_convergence', etc.)
+    solver_rest_norm: Optional[float] = None  # ||Z_rest||_∞ residual
+    solver_walras_dot: Optional[float] = None  # |p·Z(p)| sanity residual
+    solver_total_time: Optional[float] = None  # total wall-clock time (s)
+    solver_fsolve_time: Optional[float] = None  # primary solver time (s)
+    solver_tatonnement_time: Optional[float] = None  # fallback tatonnement time (s)
+    solver_tatonnement_iterations: Optional[int] = None  # fallback iterations
+    solver_fallback_used: Optional[bool] = None  # whether fallback path executed
+    solver_method: Optional[str] = None  # primary method label ('fsolve', etc.)
 
     timestamp_ns: int = field(default_factory=lambda: time.time_ns())
 
@@ -222,9 +235,9 @@ class RunLogger:
             return
         shard_name = f"{self.run_name}_partial_{len(self._flushed_partial)}.jsonl"
         shard_path = self.output_dir / shard_name
-        with shard_path.open("a") as f:
+        with shard_path.open("a", encoding="utf-8") as f:
             for rec in self._buffer:
-                f.write(json.dumps(rec.to_dict()) + "\n")
+                f.write(json.dumps(rec.to_dict(), ensure_ascii=True) + "\n")
         self._flushed_partial.extend(self._buffer)
         self._buffer.clear()
         LOGGER.info(f"Flushed intermediate shard: {shard_path}")
@@ -232,14 +245,14 @@ class RunLogger:
     def _write_jsonl(self, path: Path) -> Path:
         if self.compress:
             gz_path = path.with_suffix(path.suffix + ".gz")
-            with gzip.open(gz_path, "wt") as f:  # type: ignore[arg-type]
+            with gzip.open(gz_path, "wt", encoding="utf-8") as f:  # type: ignore[arg-type]
                 for rec in self._buffer:
-                    f.write(json.dumps(rec.to_dict()) + "\n")
+                    f.write(json.dumps(rec.to_dict(), ensure_ascii=True) + "\n")
             return gz_path
         else:
-            with path.open("w") as f:
+            with path.open("w", encoding="utf-8") as f:
                 for rec in self._buffer:
-                    f.write(json.dumps(rec.to_dict()) + "\n")
+                    f.write(json.dumps(rec.to_dict(), ensure_ascii=True) + "\n")
             return path
 
     def _write_parquet(self, path: Path) -> Path:
@@ -302,8 +315,8 @@ class RunLogger:
             "partial_flushes": 1 if self._flushed_partial else 0,
             "flush_interval": self._flush_interval,
         }
-        with (self.output_dir / f"{self.run_name}_metadata.json").open("w") as f:
-            json.dump(meta, f, indent=2)
+        with (self.output_dir / f"{self.run_name}_metadata.json").open("w", encoding="utf-8") as f:
+            json.dump(meta, f, indent=2, ensure_ascii=True)
 
         # Minimal integrity digest (NOT per-round full hash):
         # Construct deterministic sequence: for each round r ascending ->
@@ -347,9 +360,9 @@ class RunLogger:
                 **({"geometry_hash": geometry_hash} if geometry_hash else {}),
             }
             with (self.output_dir / f"{self.run_name}_integrity.json").open(
-                "w"
+                "w", encoding="utf-8"
             ) as f_int:
-                json.dump(integrity, f_int, indent=2)
+                json.dump(integrity, f_int, indent=2, ensure_ascii=True)
         except Exception as e:  # pragma: no cover - best effort
             LOGGER.warning(f"Failed to write integrity digest: {e}")
 

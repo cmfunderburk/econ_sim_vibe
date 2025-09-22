@@ -340,7 +340,16 @@ def run_round(
                         for agent in viable_agents:
                             state.agent_phases[agent.agent_id] = AgentPhase.TO_HOME
             except Exception:  # pragma: no cover - propagate minimal failure info
+                # Preserve previous status or mark failure without overwriting a prior successful label
+                if state.last_solver_status is None:
+                    state.last_solver_status = "solver_error"
                 pass
+    else:
+        # No pricing attempt this round (insufficient participants)
+        if state.last_solver_status is None:
+            state.last_solver_status = "no_pricing"
+        if state.last_solver_rest_norm is None:
+            state.last_solver_rest_norm = 0.0
 
     state.round += 1
     return state

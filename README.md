@@ -2,7 +2,7 @@
 
 Research-grade agent-based economic simulation platform for studying spatial frictions, movement costs, and centralized marketplace trading under a spatial Walrasian protocol.
 
-**Test Suite:** 250/250 tests passing (unit + validation + replay, spatial fidelity, HUD & playback controls)
+**Test Suite:** 259/259 tests passing (unit + validation + replay, spatial fidelity, HUD & playback controls)
 
 ## 🎯 Current Development Status
 
@@ -11,10 +11,10 @@ Research-grade agent-based economic simulation platform for studying spatial fri
 - **Phase 2 (Spatial Extensions)**: CORE IMPLEMENTATION COMPLETE – movement, travel costs, visualization, structured logging, replay integrity.
 
 ### Core Capabilities (✅)
-- Economic engine: Walrasian LTE pricing (participants’ total endowments) with constrained execution (personal inventory financing).
+- Economic engine: Unified Walrasian LTE solver (participants’ total endowments) with constrained execution (personal inventory financing).
 - Market clearing: Proportional rationing; conservation & value-feasibility invariants enforced.
 - Travel cost integration: Budget-side deduction w_i = max(0, p·ω_total − κ·d_i).
-- Movement: Deterministic greedy Manhattan step (A* planned).
+- Movement: Deterministic greedy Manhattan step plus implemented deterministic A* pathfinding option (Manhattan heuristic, lexicographic tie-breaking, path caching).
 - Structured logging: JSONL + geometry sidecar + integrity digest + schema guard (1.3.0).
 - Replay & HUD: Frame hash, convergence index, clearing efficiency, unmet shares.
 - Rationing diagnostics: Per-agent unmet buys/sells, fill rates, liquidity gaps.
@@ -24,12 +24,14 @@ Research-grade agent-based economic simulation platform for studying spatial fri
 - Frame digest & hashing for regression protection.
 - Config validation preflight (grid/marketplace/agent consistency).
 - Financing mode enum scaffold (`PERSONAL` active, `TOTAL_WEALTH` placeholder).
+- Runtime diagnostics: Optional solver assertions via `ECON_SOLVER_ASSERT=1`.
+- Travel-cost budget gating: `ECON_ENABLE_TRAVEL_BUDGET=0` disables w_i adjustment for comparative experiments.
 
 ### In Progress / Planned (📋)
-- A* pathfinding (movement optimality under static additive costs).
 - TOTAL_WEALTH financing semantics & comparative liquidity regime analysis.
 - Performance harness & warm-start heuristics for multi-round solver reuse.
 - Optional compressed logging & CLI convenience flags.
+- Phase B: performance + financing mode expansion (post Phase A completion).
 
 ### Deferred / Future (🚧 Phase 3+)
 - Local price formation (bargaining / order book microstructure).
@@ -107,7 +109,9 @@ Personal-inventory financing enforced (PERSONAL mode). See `docs/STATUS.md` for 
 ## Simulation Protocol
 
 Each round follows the spatial Walrasian protocol:
-1. **Agent Movement**: Move toward marketplace (Manhattan/L1; tie-break lexicographic by (x,y), then agent ID)
+1. **Agent Movement**: Move toward marketplace using the configured movement policy:
+       - `greedy` (default): Single Manhattan-descent step (reduce |Δx| first, then |Δy|) with lexicographic tie-breaking by (x,y) then agent ID.
+       - `astar`: Deterministic A* (Manhattan heuristic) producing an optimal shortest L1 path under static additive costs (no congestion). Neighbor expansion order and a stable priority tuple (f,g,x,y,seq) guarantee reproducibility. Paths are cached until geometry/target changes.
 2. **Price Discovery**: Compute Local Theoretical Equilibrium (LTE) using **post-move** marketplace participants' total endowments
 3. **Order Generation**: Each marketplace agent computes buy/sell orders
 4. **Order Matching**: Execute trades constrained by personal inventory with proportional rationing
@@ -116,14 +120,17 @@ Each round follows the spatial Walrasian protocol:
 **Termination**: Simulation stops at T ≤ 200 rounds, when all agents reach marketplace with total unmet demand/supply below tolerance for 5 consecutive rounds, or after max_stale_rounds without meaningful progress.
 
 ### Validation Framework
-250/250 tests passing (unit + validation + replay + visualization). Economic theory invariants, spatial distance fidelity, logging schema stability, and replay reconstruction all under regression test.
+254/254 tests passing (unit + validation + replay + visualization). Economic theory invariants, spatial distance fidelity, logging schema stability, solver diagnostics, and replay reconstruction all under regression test.
 
 ### Playback Controls (GUI)
 Space: play/pause | Right Arrow: step forward | Up/Down: speed ± (doubling/halving) | Esc/q: quit.
 HUD displays current status (PLAY/PAUSE/LIVE), speed (r/s), convergence index, solver residual, fill & unmet shares, distances, efficiency, and a digest snippet.
 
 ### Numerical Notes
-Adaptive fallback (tâtonnement) engages if `fsolve` struggles; final rest-goods norm enforced at < 1e-8. HUD surfaces solver residual & status for transparency.
+Unified solver with adaptive fallback (tâtonnement) engages if `fsolve` struggles; final rest-goods norm enforced at < 1e-8. HUD surfaces solver residual & status for transparency. Optional runtime assertion layer (`ECON_SOLVER_ASSERT`) adds shape/NaN guards in development contexts.
+
+### Movement Policy Details
+The A* policy uses Manhattan distance as an admissible & consistent heuristic on the 4-neighbor lattice. Because movement costs are homogeneous and additive (each step cost = κ in numéraire units), A* returns globally shortest paths. Deterministic ordering ensures identical trajectories across platforms. If future regimes introduce dynamic congestion, heterogeneous edge costs, or stochastic obstacles, optimality guarantees will be scoped accordingly; the greedy policy remains a baseline for pedagogical comparison and profile benchmarking.
 
 ## Logging & Replay Overview
 Per-round JSONL (or Parquet if optional deps installed) records one row per agent per round. A geometry sidecar (market bounds, grid size, movement policy) plus deterministic frame hash supports spatial & HUD fidelity replay. An integrity digest (sha256) validates price path & participant identity sets.

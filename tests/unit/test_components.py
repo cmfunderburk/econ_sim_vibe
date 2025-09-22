@@ -22,6 +22,7 @@ except ImportError:
 from core.agent import Agent
 from core.types import Trade, SimulationState
 from spatial.grid import Grid, Position
+from spatial.movement import get_movement_policy
 
 
 class TestAgent:
@@ -325,6 +326,90 @@ class TestGridMovement:
         steps = grid.move_agent_toward_marketplace(5)
         assert steps == 0
         assert grid.get_position(5) == marketplace_center
+
+    # ------------------------------------------------------------------
+    # A* movement policy tests (new)
+    # ------------------------------------------------------------------
+    def test_astar_optimal_path_length(self):
+        """A* path length equals Manhattan distance on empty grid."""
+
+        grid = Grid(width=10, height=10, marketplace_width=2, marketplace_height=2)
+        start = Position(0, 0)
+        target = Position(7, 4)
+        grid.add_agent(agent_id=11, position=start)
+
+        policy = get_movement_policy("astar")
+        manhattan = start.manhattan_distance(target)  # type: ignore[attr-defined]
+        total_steps = 0
+        for _ in range(100):  # safety upper bound
+            if grid.get_position(11) == target:
+                break
+            moved = policy.move_agent_toward_position(grid, 11, target)
+            total_steps += moved
+        assert grid.get_position(11) == target
+        assert total_steps == manhattan
+
+    def test_astar_no_move_when_at_target(self):
+        grid = Grid(width=6, height=6, marketplace_width=2, marketplace_height=2)
+        start = Position(3, 3)
+        grid.add_agent(agent_id=22, position=start)
+        policy = get_movement_policy("astar")
+        moved = policy.move_agent_toward_position(grid, 22, start)
+        assert moved == 0
+        assert grid.get_position(22) == start
+
+    def test_astar_marketplace_movement(self):
+        """A* moves until agent first enters marketplace.
+
+        The policy targets the marketplace center but halts early once the
+        agent crosses into any marketplace cell. Therefore the realized
+        step count equals the Manhattan distance to the NEAREST marketplace
+        cell, which is <= distance to the geometric center.
+        """
+        grid = Grid(width=8, height=8, marketplace_width=2, marketplace_height=2)
+        grid.add_agent(agent_id=33, position=Position(0, 0))
+        policy = get_movement_policy("astar")
+        # Distance to nearest marketplace cell (lower bound on steps needed)
+        nearest_dist = grid.distance_to_marketplace(grid.get_position(33))
+        # Distance to chosen center target (may be larger than nearest marketplace perimeter cell)
+        center_dist = grid.get_position(33).manhattan_distance(grid.get_marketplace_center())
+        steps = 0
+        for _ in range(100):
+            if grid.is_in_marketplace(grid.get_position(33)):
+                break
+            moved = policy.move_agent_toward_marketplace(grid, 33)
+            steps += moved
+        assert grid.is_in_marketplace(grid.get_position(33))
+        # After the final move, agent is inside. Initial nearest_dist counts
+        # boundary distance (minimum steps to reach any marketplace cell), but
+        # the path includes the entering move when distance hits 1 then step to 0.
+        assert steps == nearest_dist + 1
+        # Center distance remains an upper bound.
+        assert center_dist >= steps
+
+    def test_astar_tie_break_determinism(self):
+        """Running A* twice from same start/target yields identical path sequence."""
+        grid1 = Grid(width=7, height=7, marketplace_width=1, marketplace_height=1)
+        grid2 = Grid(width=7, height=7, marketplace_width=1, marketplace_height=1)
+        start = Position(1, 5)
+        target = Position(5, 1)
+        grid1.add_agent(77, start)
+        grid2.add_agent(77, start)
+        p1 = get_movement_policy("astar")
+        p2 = get_movement_policy("astar")
+        seq1 = []
+        seq2 = []
+        for _ in range(20):
+            if grid1.get_position(77) == target:
+                break
+            p1.move_agent_toward_position(grid1, 77, target)
+            seq1.append(grid1.get_position(77))
+        for _ in range(20):
+            if grid2.get_position(77) == target:
+                break
+            p2.move_agent_toward_position(grid2, 77, target)
+            seq2.append(grid2.get_position(77))
+        assert seq1 == seq2
 
 
 class TestTradeDataclass:

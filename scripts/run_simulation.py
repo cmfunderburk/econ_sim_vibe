@@ -1,31 +1,31 @@
 #!/usr/bin/env python3
-"""
-Main simulation runner script.
+"""Simulation runner (clean restored version).
 
-Usage:
-    python scripts/run_simulation.py --config config/edgeworth.yaml --seed 42
-    python scripts/run_simulation.py --config config/zero_movement_cost.yaml --seed 123 --output results/
+Orchestrates execution of spatial Walrasian rounds, optional GUI / ASCII
+rendering, and structured per-agent logging (schema >=1.4.x) including
+solver diagnostic fields.
 """
+
+from __future__ import annotations
 
 import argparse
-import sys
-import random
 import json
+import random
+import sys
 from pathlib import Path
-from typing import Dict, Any, Optional, List
-from dataclasses import dataclass
-import yaml
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 
-# Temporary path hack retained until packaging task (see architectural plan)
-sys.path.append(str(Path(__file__).parent.parent))  # TODO: remove after console_scripts
+# Temporary path injection (until packaged console script is set up)
+sys.path.append(str(Path(__file__).parent.parent))
 
 from src.core.simulation import (
     SimulationConfig,
     RuntimeSimulationState,
     initialize_runtime_state,
     run_round,
-    AgentPhase,
+    AgentPhase,  # re-export for legacy tests expecting AgentPhase here
 )
 from src.visualization import build_frame, ASCIIRenderer  # type: ignore
 from src.visualization.playback import (
@@ -34,60 +34,47 @@ from src.visualization.playback import (
     LogReplayStream,
 )  # type: ignore
 
-try:  # Optional pygame renderer import
+try:  # optional GUI
     from src.visualization import PygameRenderer  # type: ignore
 except Exception:  # pragma: no cover
     PygameRenderer = None  # type: ignore
-from src.core.config_validation import validate_simulation_config
-from src.core.agent import Agent  # re-used for type hints
-from typing import List as _ListType, Optional as _OptionalType
 
-# Logging layer (optional)
-try:
+from src.core.config_validation import validate_simulation_config
+
+try:  # structured logging (optional)
     from src.logging.run_logger import RunLogger, RoundLogRecord, SCHEMA_VERSION
-except ImportError:  # pragma: no cover - logging module optional
+except Exception:  # pragma: no cover
     RunLogger = None  # type: ignore
     RoundLogRecord = None  # type: ignore
     SCHEMA_VERSION = "0.0.0"  # type: ignore
 
 
-#############################
-# Legacy Dataclasses Removed #
-#############################
-# Local SimulationState & AgentPhase definitions replaced by runtime module.
-
-
 def load_config(config_path: Path) -> SimulationConfig:
-    """Load simulation configuration from YAML."""
+    import yaml
+
     with open(config_path, "r") as f:
-        config_data = yaml.safe_load(f)
-
-    sim_config = config_data.get("simulation", {})
-    agents_config = config_data.get("agents", {})
-    economy_config = config_data.get("economy", {})
-
-    config = SimulationConfig(
-        name=sim_config.get("name", "Unknown Simulation"),
-        n_agents=agents_config.get("count", 10),
-        n_goods=economy_config.get("goods", 3),
-        grid_width=economy_config.get("grid_size", [15, 15])[0],
-        grid_height=economy_config.get("grid_size", [15, 15])[1],
-        marketplace_width=economy_config.get("marketplace_size", [2, 2])[0],
-        marketplace_height=economy_config.get("marketplace_size", [2, 2])[1],
-        movement_cost=economy_config.get("movement_cost", 0.1),
-        max_rounds=sim_config.get("max_rounds", 50),
-        random_seed=sim_config.get("seed", 42),
-        movement_policy=economy_config.get("movement_policy", "greedy"),
+        data = yaml.safe_load(f)
+    sim_cfg = data.get("simulation", {})
+    agents_cfg = data.get("agents", {})
+    econ_cfg = data.get("economy", {})
+    cfg = SimulationConfig(
+        name=sim_cfg.get("name", config_path.stem),
+        n_agents=agents_cfg.get("count", 10),
+        n_goods=econ_cfg.get("goods", 3),
+        grid_width=econ_cfg.get("grid_size", [15, 15])[0],
+        grid_height=econ_cfg.get("grid_size", [15, 15])[1],
+        marketplace_width=econ_cfg.get("marketplace_size", [2, 2])[0],
+        marketplace_height=econ_cfg.get("marketplace_size", [2, 2])[1],
+        movement_cost=econ_cfg.get("movement_cost", 0.0),
+        max_rounds=sim_cfg.get("max_rounds", 50),
+        random_seed=sim_cfg.get("seed", 42),
+        movement_policy=econ_cfg.get("movement_policy", "greedy"),
     )
-    # Validate and raise early if invalid
-    validate_simulation_config(config)
-    return config
+    validate_simulation_config(cfg)
+    return cfg
 
 
-def initialize_simulation(
-    config: SimulationConfig,
-) -> RuntimeSimulationState:  # Backwards compatibility wrapper
-    """Wrapper preserving previous function name for CLI; delegates to runtime initializer."""
+def initialize_simulation(config: SimulationConfig) -> RuntimeSimulationState:
     random.seed(config.random_seed)
     return initialize_runtime_state(config)
 
@@ -95,8 +82,18 @@ def initialize_simulation(
 def run_simulation_round(
     state: RuntimeSimulationState, config: SimulationConfig
 ) -> RuntimeSimulationState:
-    """Backward compatible wrapper delegating to core.simulation.run_round."""
     return run_round(state, config)
+
+# Backward compatibility: some tests import AgentPhase from scripts.run_simulation
+# even though it lives in src.core.simulation. We re-export by binding it here.
+__all__ = [
+    "SimulationConfig",
+    "RuntimeSimulationState",
+    "initialize_simulation",
+    "run_simulation_round",
+    "run_simulation",
+    "AgentPhase",
+]
 
 
 def run_simulation(
@@ -110,61 +107,47 @@ def run_simulation(
     snapshot_dir: Optional[Path] = None,
     snapshot_every: Optional[int] = None,
 ) -> Dict[str, Any]:
-    """Run complete simulation from configuration."""
+    """Execute full simulation returning summary dictionary."""
 
-    # Load configuration
     config = load_config(config_path)
-
-    # Apply seed override if provided
     if seed_override is not None:
         config.random_seed = seed_override
 
     print(f"Starting simulation: {config.name}")
-    print(f"Grid size: {config.grid_width}×{config.grid_height}")
-    print(f"Marketplace: {config.marketplace_width}×{config.marketplace_height}")
-    print(f"Agents: {config.n_agents}, Goods: {config.n_goods}")
-    print(f"Movement cost: {config.movement_cost}")
-    print(f"Max rounds: {config.max_rounds}")
-    print(f"Random seed: {config.random_seed}")
+    print(
+        f"Grid {config.grid_width}x{config.grid_height}  Marketplace {config.marketplace_width}x{config.marketplace_height}  Agents={config.n_agents} Goods={config.n_goods}"
+    )
+    print(
+        f"Movement cost={config.movement_cost}  Max rounds={config.max_rounds}  Seed={config.random_seed}"
+    )
 
-    # Initialize simulation
     state = initialize_simulation(config)
 
-    # Initialize structured logger if output path provided
-    run_logger = None  # defer typing; optional logger instance
+    run_logger = None
     geometry_sidecar_path = None
     if output_path and RunLogger is not None:  # type: ignore
         run_name = f"{config.name}_seed{config.random_seed}"
         run_logger = RunLogger(output_path, run_name)  # type: ignore
-        # Write geometry sidecar early (before rounds) for replay distance reconstruction
-        try:
-            from src.logging.geometry import (
-                GeometrySpec,
-                write_geometry_sidecar,
-            )  # local import to keep optional
+        try:  # geometry sidecar
+            from src.logging.geometry import GeometrySpec, write_geometry_sidecar  # type: ignore
 
-            # Marketplace assumed centered per Grid implementation; derive bounds via grid helper once initialized
             gx_min = (config.grid_width - config.marketplace_width) // 2
             gy_min = (config.grid_height - config.marketplace_height) // 2
-            gx_max = gx_min + config.marketplace_width - 1
-            gy_max = gy_min + config.marketplace_height - 1
-            geom_spec = GeometrySpec(
+            geom = GeometrySpec(
                 run_name=run_name,
                 grid_width=config.grid_width,
                 grid_height=config.grid_height,
                 market_x_min=gx_min,
-                market_x_max=gx_max,
+                market_x_max=gx_min + config.marketplace_width - 1,
                 market_y_min=gy_min,
-                market_y_max=gy_max,
+                market_y_max=gy_min + config.marketplace_height - 1,
                 movement_policy=config.movement_policy,
                 random_seed=config.random_seed,
             )
-            geometry_sidecar_path = write_geometry_sidecar(output_path, geom_spec)
-        except Exception:
+            geometry_sidecar_path = write_geometry_sidecar(output_path, geom)
+        except Exception:  # pragma: no cover
             geometry_sidecar_path = None
 
-    # Run simulation rounds
-    # Per-round summary accumulation (typed for static analysis clarity)
     results: List[Dict[str, Any]] = []
     ascii_renderer = ASCIIRenderer() if ascii_interval else None
     gui_renderer = None
@@ -174,160 +157,161 @@ def run_simulation(
                 tick_ms=tick_ms, title=f"{config.name} (seed {config.random_seed})"
             )
         except Exception as e:  # pragma: no cover
-            print(f"Warning: failed to initialize GUI renderer: {e}")
+            print(f"Warning: GUI init failed: {e}")
             gui_renderer = None
 
-    # Internal helper to build structured logging records (deduplicated logic)
     def _build_round_log_records(
         state: RuntimeSimulationState,
-    ) -> _OptionalType[_ListType["RoundLogRecord"]]:  # type: ignore[name-defined]
-        """Construct per-agent RoundLogRecord list for current state.
-
-        Returns None if logging types unavailable (RunLogger or RoundLogRecord missing).
-        Mirrors previous duplicated logic across GUI and headless paths.
-        """
+    ) -> Optional[List["RoundLogRecord"]]:  # type: ignore[name-defined, return-type]  # noqa: C901
         if RunLogger is None or RoundLogRecord is None:  # type: ignore
             return None
-        marketplace_ids = {
-            a.agent_id
-            for a in state.agents
-            if state.grid.is_in_marketplace(state.grid.get_position(a.agent_id))
-        }
-        n_goods = len(state.prices)
-        from typing import Dict as _Dict, List as _List, Optional as _Optional
-
-        executed_net: _Dict[int, _List[float]] = {
-            a.agent_id: [0.0] * n_goods for a in state.agents
-        }
-        executed_buys: _Dict[int, _List[float]] = {
-            a.agent_id: [0.0] * n_goods for a in state.agents
-        }
-        executed_sells: _Dict[int, _List[float]] = {
-            a.agent_id: [0.0] * n_goods for a in state.agents
-        }
-        for tr in state.trades:
-            if tr.quantity > 0:
-                executed_buys[tr.agent_id][tr.good_id] += tr.quantity
-            elif tr.quantity < 0:
-                executed_sells[tr.agent_id][tr.good_id] += -tr.quantity
-            executed_net[tr.agent_id][tr.good_id] += tr.quantity
-
-        unmet_demand = None
-        unmet_supply = None
-        per_agent_requested_buys: _Dict[int, _Optional[_List[float]]] = {
-            a.agent_id: None for a in state.agents
-        }
-        per_agent_requested_sells: _Dict[int, _Optional[_List[float]]] = {
-            a.agent_id: None for a in state.agents
-        }
-        per_agent_unmet_buys: _Dict[int, _Optional[_List[float]]] = {
-            a.agent_id: None for a in state.agents
-        }
-        per_agent_unmet_sells: _Dict[int, _Optional[_List[float]]] = {
-            a.agent_id: None for a in state.agents
-        }
-        per_agent_fill_buy: _Dict[int, _Optional[_List[float]]] = {
-            a.agent_id: None for a in state.agents
-        }
-        per_agent_fill_sell: _Dict[int, _Optional[_List[float]]] = {
-            a.agent_id: None for a in state.agents
-        }
-
-        if state.last_market_result is not None:
-            unmet_demand = state.last_market_result.unmet_demand.tolist()
-            unmet_supply = state.last_market_result.unmet_supply.tolist()
-            diag = state.last_market_result.rationing_diagnostics
-            if diag is not None:
-                for agent_id, arr in diag.agent_unmet_buys.items():
-                    per_agent_unmet_buys[agent_id] = arr.tolist()
-                for agent_id, arr in diag.agent_unmet_sells.items():
-                    per_agent_unmet_sells[agent_id] = arr.tolist()
-                for agent_id, arr in diag.agent_fill_rates_buy.items():
-                    per_agent_fill_buy[agent_id] = arr.tolist()
-                for agent_id, arr in diag.agent_fill_rates_sell.items():
-                    per_agent_fill_sell[agent_id] = arr.tolist()
-            # Reconstruct requested orders if unmet arrays present
-            for agent in state.agents:
-                agent_id = agent.agent_id
-                unmet_buys = per_agent_unmet_buys[agent_id]
-                unmet_sells = per_agent_unmet_sells[agent_id]
-                if unmet_buys is not None and unmet_sells is not None:
-                    rb: _List[float] = [
-                        executed_buys[agent_id][g] + unmet_buys[g]
-                        for g in range(n_goods)
-                    ]
-                    rs: _List[float] = [
-                        executed_sells[agent_id][g] + unmet_sells[g]
-                        for g in range(n_goods)
-                    ]
-                    per_agent_requested_buys[agent_id] = rb
-                    per_agent_requested_sells[agent_id] = rs
-
-        from typing import List as _ListRR
-
-        records: _ListRR[RoundLogRecord] = []  # type: ignore[name-defined]
-        # Pre-compute round spatial aggregates (distances) for fidelity logging
         try:
-            # Marketplace bounds from grid
-            gx_min = state.grid.marketplace_x
-            gx_max = state.grid.marketplace_x + state.grid.marketplace_width - 1
-            gy_min = state.grid.marketplace_y
-            gy_max = state.grid.marketplace_y + state.grid.marketplace_height - 1
-            from src.logging.geometry import manhattan_distance_to_market  # local import
+            n_goods = len(state.prices)
+            marketplace_ids = {
+                a.agent_id
+                for a in state.agents
+                if state.grid.is_in_marketplace(state.grid.get_position(a.agent_id))
+            }
 
-            per_agent_distance: dict[int, int] = {}
-            max_dist = 0
-            total_dist = 0
-            for agent in state.agents:
-                pos_tmp = state.grid.get_position(agent.agent_id)
-                d_val = manhattan_distance_to_market(
-                    pos_tmp.x, pos_tmp.y, gx_min, gx_max, gy_min, gy_max
-                )
-                per_agent_distance[agent.agent_id] = d_val
-                max_dist = max(max_dist, d_val)
-                total_dist += d_val
-            avg_dist = (total_dist / len(state.agents)) if state.agents else 0.0
-        except Exception:
-            per_agent_distance = {a.agent_id: None for a in state.agents}  # type: ignore[assignment]
-            max_dist = None  # type: ignore[assignment]
-            avg_dist = None  # type: ignore[assignment]
-        for agent in state.agents:
-            pos = state.grid.get_position(agent.agent_id)
+            # --- Executed trade aggregation ---
+            executed_net: Dict[int, List[float]] = {a.agent_id: [0.0] * n_goods for a in state.agents}
+            executed_buys: Dict[int, List[float]] = {a.agent_id: [0.0] * n_goods for a in state.agents}
+            executed_sells: Dict[int, List[float]] = {a.agent_id: [0.0] * n_goods for a in state.agents}
+            for tr in state.trades:
+                if tr.quantity > 0:
+                    executed_buys[tr.agent_id][tr.good_id] += tr.quantity
+                elif tr.quantity < 0:
+                    executed_sells[tr.agent_id][tr.good_id] += -tr.quantity
+                executed_net[tr.agent_id][tr.good_id] += tr.quantity
+
+            # --- Per-agent rationing diagnostics placeholders ---
+            per_agent_requested_buys: Dict[int, Optional[List[float]]] = {a.agent_id: None for a in state.agents}
+            per_agent_requested_sells: Dict[int, Optional[List[float]]] = {a.agent_id: None for a in state.agents}
+            per_agent_unmet_buys: Dict[int, Optional[List[float]]] = {a.agent_id: None for a in state.agents}
+            per_agent_unmet_sells: Dict[int, Optional[List[float]]] = {a.agent_id: None for a in state.agents}
+            # fill rate arrays
+            per_agent_fill_buy: Dict[int, Optional[List[float]]] = {a.agent_id: None for a in state.agents}
+            per_agent_fill_sell: Dict[int, Optional[List[float]]] = {a.agent_id: None for a in state.agents}
+
+            unmet_demand = None
+            unmet_supply = None
+            if state.last_market_result is not None:
+                mr = state.last_market_result
+                unmet_demand = mr.unmet_demand.tolist()
+                unmet_supply = mr.unmet_supply.tolist()
+                diag = mr.rationing_diagnostics
+                if diag is not None:
+                    for aid, arr in diag.agent_unmet_buys.items():
+                        per_agent_unmet_buys[aid] = arr.tolist()
+                    for aid, arr in diag.agent_unmet_sells.items():
+                        per_agent_unmet_sells[aid] = arr.tolist()
+                    for aid, arr in diag.agent_fill_rates_buy.items():
+                        per_agent_fill_buy[aid] = arr.tolist()
+                    for aid, arr in diag.agent_fill_rates_sell.items():
+                        per_agent_fill_sell[aid] = arr.tolist()
+                # Reconstruct requested quantities (executed + unmet)
+                for a in state.agents:
+                    ub = per_agent_unmet_buys[a.agent_id]
+                    us = per_agent_unmet_sells[a.agent_id]
+                    if ub is not None and us is not None:
+                        per_agent_requested_buys[a.agent_id] = [
+                            executed_buys[a.agent_id][g] + ub[g] for g in range(n_goods)
+                        ]
+                        per_agent_requested_sells[a.agent_id] = [
+                            executed_sells[a.agent_id][g] + us[g] for g in range(n_goods)
+                        ]
+
+            # --- Spatial distances ---
             try:
-                util = agent.utility(agent.total_endowment)
+                from src.logging.geometry import manhattan_distance_to_market  # type: ignore
+
+                gx_min = state.grid.marketplace_x
+                gx_max = gx_min + state.grid.marketplace_width - 1
+                gy_min = state.grid.marketplace_y
+                gy_max = gy_min + state.grid.marketplace_height - 1
+                per_agent_distance: Dict[int, int] = {}
+                max_dist = 0
+                total_dist = 0
+                for a in state.agents:
+                    pos_a = state.grid.get_position(a.agent_id)
+                    d_val = manhattan_distance_to_market(pos_a.x, pos_a.y, gx_min, gx_max, gy_min, gy_max)
+                    per_agent_distance[a.agent_id] = d_val
+                    max_dist = max(max_dist, d_val)
+                    total_dist += d_val
+                avg_dist = total_dist / len(state.agents) if state.agents else 0.0
+            except Exception:  # pragma: no cover
+                per_agent_distance = {a.agent_id: None for a in state.agents}  # type: ignore
+                max_dist = None  # type: ignore
+                avg_dist = None  # type: ignore
+
+            # --- Solver metrics (single snapshot, duplicated per row) ---
+            solver_metrics: Dict[str, Any] = {}
+            try:
+                from src.econ.equilibrium import get_last_solver_metrics  # type: ignore
+
+                solver_metrics = get_last_solver_metrics() or {}
             except Exception:
-                util = None
-            records.append(
-                RoundLogRecord(
+                solver_metrics = {}
+
+            records: List["RoundLogRecord"] = []  # type: ignore[name-defined]
+            for a in state.agents:
+                pos = state.grid.get_position(a.agent_id)
+                try:
+                    util_val = a.utility(a.total_endowment)
+                except Exception:
+                    util_val = None
+                try:
+                    total_val = float(np.dot(state.prices, a.total_endowment)) if len(state.prices) else None
+                except Exception:
+                    total_val = None
+                travel_cost = state.agent_travel_costs.get(a.agent_id, 0.0)
+                travel_adjusted = None if total_val is None else max(0.0, total_val - travel_cost)
+                financing_mode = getattr(state, "financing_mode", "PERSONAL")
+                effective_budget = travel_adjusted if financing_mode == "TOTAL_WEALTH" else None
+                rec = RoundLogRecord(
                     core_schema_version=SCHEMA_VERSION,
                     core_round=state.round,
-                    core_agent_id=agent.agent_id,
+                    core_agent_id=a.agent_id,
                     spatial_pos_x=pos.x,
                     spatial_pos_y=pos.y,
-                    spatial_in_marketplace=agent.agent_id in marketplace_ids,
-                    spatial_distance_to_market=per_agent_distance.get(agent.agent_id),  # type: ignore[arg-type]
+                    spatial_in_marketplace=a.agent_id in marketplace_ids,
+                    spatial_distance_to_market=per_agent_distance.get(a.agent_id),
                     spatial_max_distance_round=max_dist,
                     spatial_avg_distance_round=avg_dist,
                     spatial_initial_max_distance=state.initial_max_distance,
                     econ_prices=state.prices.tolist(),
-                    econ_executed_net=executed_net[agent.agent_id],
-                    econ_requested_buys=per_agent_requested_buys[agent.agent_id],
-                    econ_requested_sells=per_agent_requested_sells[agent.agent_id],
-                    econ_executed_buys=executed_buys[agent.agent_id],
-                    econ_executed_sells=executed_sells[agent.agent_id],
-                    econ_unmet_buys=per_agent_unmet_buys[agent.agent_id],
-                    econ_unmet_sells=per_agent_unmet_sells[agent.agent_id],
-                    econ_fill_rate_buys=per_agent_fill_buy[agent.agent_id],
-                    econ_fill_rate_sells=per_agent_fill_sell[agent.agent_id],
+                    econ_executed_net=executed_net[a.agent_id],
+                    econ_requested_buys=per_agent_requested_buys[a.agent_id],
+                    econ_requested_sells=per_agent_requested_sells[a.agent_id],
+                    econ_executed_buys=executed_buys[a.agent_id],
+                    econ_executed_sells=executed_sells[a.agent_id],
+                    econ_unmet_buys=per_agent_unmet_buys[a.agent_id],
+                    econ_unmet_sells=per_agent_unmet_sells[a.agent_id],
+                    econ_fill_rate_buys=per_agent_fill_buy[a.agent_id],
+                    econ_fill_rate_sells=per_agent_fill_sell[a.agent_id],
                     ration_unmet_demand=unmet_demand,
                     ration_unmet_supply=unmet_supply,
-                    wealth_travel_cost=state.agent_travel_costs[agent.agent_id],
-                    wealth_effective_budget=None,
-                    financing_mode="PERSONAL",
-                    utility=util,
+                    wealth_travel_cost=travel_cost,
+                    wealth_effective_budget=effective_budget,
+                    wealth_total_endowment_value=total_val,
+                    wealth_travel_adjusted_total=travel_adjusted,
+                    financing_mode=financing_mode,
+                    utility=util_val,
+                    solver_status=state.last_solver_status,
+                    solver_rest_norm=state.last_solver_rest_norm,
+                    solver_walras_dot=solver_metrics.get("walras_dot"),
+                    solver_total_time=solver_metrics.get("total_time"),
+                    solver_fsolve_time=solver_metrics.get("fsolve_time"),
+                    solver_tatonnement_time=solver_metrics.get("tatonnement_time"),
+                    solver_tatonnement_iterations=solver_metrics.get("tatonnement_iterations"),
+                    solver_fallback_used=solver_metrics.get("fallback_used"),
+                    solver_method=solver_metrics.get("method"),
                 )
-            )
-        return records
+                records.append(rec)  # type: ignore[arg-type]
+            return records
+        except Exception as e:  # pragma: no cover
+            print(f"Warning: failed to build log records (round {state.round}): {e}")
+            return None
 
     # Initialize snapshotter if requested
     snapshotter = None

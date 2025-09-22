@@ -88,6 +88,27 @@ This project builds a comprehensive economic modeling platform step-by-step from
 - **Tie-breaking**: Lexicographic by (x,y) coordinates then agent ID for deterministic pathfinding
 - **EV reporting**: All equivalent variation values in units of good 1 (numéraire)
 
+### Solver & Runtime Diagnostics (September 2025 Update)
+
+Phase A unified the equilibrium solving logic into a single robust implementation
+`solve_walrasian_equilibrium` (legacy minimal variant removed). Public API
+unchanged: `(prices, z_rest_norm, walras_dot, status)` plus status labels
+(`converged`, `poor_convergence`, `no_participants`, `insufficient_viable_agents`,
+`insufficient_participants`, `failed`).
+
+Environment flags:
+
+| Flag | Default | Effect |
+|------|---------|--------|
+| `ECON_SOLVER_ASSERT` | `0` | When `1`, enables runtime assertions (shape, positivity, finite residual checks) for development/CI. |
+| `ECON_ENABLE_TRAVEL_BUDGET` | `1` | When `0`, disables travel-cost deduction so wealth uses `p·ω_total` (comparison / legacy mode). |
+
+Travel-cost adjusted wealth (when enabled):
+\[ w_i = \max(0, p \cdot \omega_i^{total} - \kappa d_i) \]
+
+Flags are environment-based (not YAML) to allow quick A/B experiments and
+diagnostic hardening without mutating stored scenario configurations.
+
 ## Architecture Overview
 
 - **Performance Target**: Scalable to 100+ agents with vectorized numpy operations
@@ -307,7 +328,10 @@ The spatial extension maintains Walrasian equilibrium pricing while adding movem
 The simulation implements a spatial extension of Walrasian equilibrium using a clean protocol that makes spatial frictions measurable:
 
 ### Each Simulation Round:
-1. **Agent Movement**: Move one square toward marketplace (myopic A*, Manhattan/L1; tie-break lexicographic by (x,y), then agent ID)
+1. **Agent Movement**: Advance toward the marketplace using the configured movement policy. Supported policies:
+    - `greedy`: One-step Manhattan descent (reduce |Δx| until zero, then |Δy|) with lexicographic tie-breaking by (x,y) then agent ID for determinism.
+    - `astar`: Deterministic A* pathfinding (Manhattan heuristic) generating a full shortest L1 path to the selected marketplace cell. The open-set priority ordering `(f_score, g_score, x, y, sequence)` yields stable tie resolution; neighbor expansion order is fixed (±x first, then ±y). Paths are cached per agent and recomputed only if the goal or blocking geometry changes.
+    Both policies are deterministic; A* provides globally shortest routes under the static additive, no-congestion regime assumed in Phase 2.
 2. **Local-Participants Price Computation**: Solve ∑ᵢ∈marketplace zᵢ(p) = 0 using **post-move** marketplace agents' total endowments only
 3. **Market Order Submission**: Only marketplace agents can submit buy/sell orders
 4. **Constrained Clearing**: Execute at equilibrium prices, ration by personal inventory constraints
@@ -350,7 +374,9 @@ The simulation implements a spatial extension of Walrasian equilibrium using a c
 - **Spatial efficiency**: Money-metric welfare loss ≥ 0 compared to Phase 1
 - **Access restriction**: Only marketplace agents execute trades (verify no bilateral trades)
 - **Price consistency (theoretical)**: **Primary stop** uses ||Z_market(p)_{2:n}||_∞ < SOLVER_TOL. The Walras dot |p·Z_market(p)| is a **sanity check on the theoretical system** using participants' **total** endowments; executed trades may differ due to personal-inventory constraints and rationing.
-- **Movement optimality (static regime only)**: Myopic A* pathfinding is optimal under current cost model (additive, static, nonnegative costs, no congestion). **Warning**: Optimality fails with capacity constraints, dynamic participation, or throughput limitations - use regression tests to validate regime assumptions.
+- **Movement optimality (static regime only)**: Deterministic A* pathfinding (implemented) is optimal (shortest L1 path) under current cost model (additive, static, nonnegative, no congestion). **Warning**: If future features introduce dynamic congestion, heterogeneous per-step costs, stochastic obstacles, or throughput caps, previously cached or precomputed A* paths may no longer be optimal; regression tests must then gate claims of optimality.
+    - Greedy movement remains available for pedagogical clarity and profiling; it is not guaranteed to yield globally shortest paths when |Δx| and |Δy| trade-offs exist but preserves deterministic lexicographic behavior.
+    - When both policies are used in identical static settings, executed distances (total steps) for A* will be ≤ greedy and equal when the greedy’s lexicographic descent already follows a shortest path.
 - **Conservation**: Goods conserved across locations, agents, marketplace, and carry-over queues (carry-over diagnostic only)
 
 ### Validation Scenarios ✅ COMPLETE

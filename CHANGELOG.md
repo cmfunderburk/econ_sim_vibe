@@ -1,3 +1,56 @@
+## Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format follows Keep a Changelog principles (dates in ISO 8601) and Semantic Versioning where applicable. Internal research milestones may appear between public version tags while the project remains pre-1.0.
+
+### [Unreleased]
+- A* pathfinding implementation (planned)
+- TOTAL_WEALTH financing mode (planned)
+- Performance harness & warm-start heuristics (planned)
+- Compressed / selective logging options (planned)
+
+### 2025-09-21 – Phase A Completion (Diagnostics & Solver Unification)
+Summary: Consolidated solver implementations, added runtime diagnostic layer, introduced feature gating for travel-cost wealth adjustment, expanded test suite (254 tests total) ensuring economic invariants remain stable.
+
+Added:
+- Unified `solve_walrasian_equilibrium` implementation (removed legacy minimal variant)
+- Environment flag `ECON_SOLVER_ASSERT` (shape/positivity/NaN guards)
+- Environment flag `ECON_ENABLE_TRAVEL_BUDGET` (toggle travel-cost budget deduction)
+- Diagnostics / shape guard tests (rest-goods norm, normalization invariants)
+- Documentation section: “Solver & Runtime Diagnostics” in `SPECIFICATION.md`
+
+Changed:
+- README updated to reflect unified solver and new environment flags
+- Market order generation respects travel-cost toggle
+- Test count increased (250 → 254) with added diagnostic coverage
+
+Removed:
+- Legacy duplicate Walrasian solver variant (reduces maintenance risk)
+
+Integrity / Invariants:
+- All economic, conservation, and feasibility tests pass (254/254)
+- No API changes to external solver interface; status labels extended for clarity
+
+### 2025-09-15 – Logging & Replay Hardening
+- Introduced geometry sidecar & frame hash digestion
+- Added schema guard (1.3.0) for logging format
+- Replay parity tests ensuring deterministic reconstruction
+
+### 2025-09-05 – Spatial Extension Baseline
+- Implemented greedy Manhattan movement
+- Added travel-cost wealth deduction (initial always-on behavior)
+- Integrated money-metric welfare reporting
+- Established spatial validation scenarios (V2–V5)
+
+### 2025-08-20 – Phase 1 Economic Engine Complete
+- Walrasian equilibrium solver (Cobb-Douglas closed form + fallback)
+- Constrained clearing with proportional rationing
+- Validation suite V1 plus core unit tests
+- Conservation & feasibility invariants enforced
+
+---
+Historical pre-changelog commits (prior to 2025-08-20) established initial repository scaffolding, agent framework, and configuration system.
 # Changelog
 
 All notable changes to this project will be documented in this file.

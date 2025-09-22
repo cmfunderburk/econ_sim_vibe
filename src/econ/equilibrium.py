@@ -1,121 +1,22 @@
-"""Walrasian equilibrium solver (minimal implementation for tests).
+"""Walrasian equilibrium solver (robust unified implementation).
 
-The solver targets price vectors p with p[0] = 1 (numéraire) such that
-aggregate excess demand (excluding the numéraire good) is ~0 within
-SOLVER_TOL. Handles edge cases (no participants, insufficient goods).
-"""
-from __future__ import annotations
+This file previously contained both a minimal test-oriented solver and a
+robust production solver. The implementations have been unified into a
+single `solve_walrasian_equilibrium` exposing the richer functionality
+while preserving the legacy interface (returning (prices, z_rest_norm,
+walras_dot, status)). Tests importing the legacy symbol continue to
+function without modification.
 
-from typing import List, Optional, Tuple
-import numpy as np
-from dataclasses import dataclass
+Key features retained:
+* Numéraire normalization (p[0] = 1)
+* Rest-goods convergence criterion (||Z_rest||_∞)
+* Fallback tâtonnement (adaptive) when direct root find has poor convergence
+* Optional diagnostic assertions via ECON_SOLVER_ASSERT=1
+* Edge-case handling (no participants, insufficient goods/agents)
 
-try:
-    from ..constants import SOLVER_TOL, NUMERAIRE_GOOD  # type: ignore
-except Exception:
-    from constants import SOLVER_TOL, NUMERAIRE_GOOD  # type: ignore
-
-try:  # SciPy optional; tests rely on its presence but guard anyway
-    from scipy.optimize import fsolve
-except Exception:  # pragma: no cover - fallback only if SciPy missing
-    fsolve = None  # type: ignore
-
-
-def _aggregate_excess_demand(prices: np.ndarray, agents: List["Agent"]) -> np.ndarray:
-    n_goods = prices.size
-    z = np.zeros(n_goods)
-    for a in agents:
-        z += a.excess_demand(prices)
-    return z
-
-
-def _initial_prices(n_goods: int) -> np.ndarray:
-    p = np.ones(n_goods)
-    p[NUMERAIRE_GOOD] = 1.0
-    return p
-
-
-def solve_walrasian_equilibrium(
-    agents: List["Agent"],
-) -> Tuple[Optional[np.ndarray], float, float, str]:
-    """Compute Walrasian equilibrium prices for Cobb-Douglas agents.
-
-    Returns
-    -------
-    (prices, z_rest_norm, walras_dot, status)
-      prices : np.ndarray or None
-        Price vector with p[0]=1 on success, else None for no participants.
-      z_rest_norm : float
-        Infinity norm of excess demand excluding the numéraire good.
-      walras_dot : float
-        |p·Z(p)| sanity check value.
-      status : str
-        'converged', 'no_participants', 'poor_convergence', 'failed',
-        or edge-case labels used in tests.
-    """
-    if not agents:
-        return None, 0.0, 0.0, "no_participants"
-
-    n_goods = agents[0].alpha.size
-    if n_goods < 2:
-        # Degenerate single-good economy (prices not meaningful)
-        p = _initial_prices(n_goods)
-        return p, 0.0, 0.0, "insufficient_goods"
-
-    # Filter out zero wealth agents to avoid singular systems
-    viable = []
-    for a in agents:
-        if np.dot(np.ones(n_goods), a.total_endowment) > 0.0:
-            viable.append(a)
-    if len(viable) < 1:
-        return None, 0.0, 0.0, "insufficient_viable_agents"
-
-    agents = viable
-
-    p0 = _initial_prices(n_goods)
-
-    def system(p_rest: np.ndarray) -> np.ndarray:
-        prices = p0.copy()
-        prices[1:] = p_rest
-        z = _aggregate_excess_demand(prices, agents)
-        return z[1:]  # Rest-goods excess demand
-
-    if fsolve is None:
-        # Very naive tâtonnement fallback (should not trigger in CI)
-        p_rest = np.ones(n_goods - 1)
-        for _ in range(500):
-            F = system(p_rest)
-            if np.linalg.norm(F, np.inf) < SOLVER_TOL:
-                break
-            p_rest = np.maximum(p_rest * (1 + 0.1 * F), 1e-8)
-        prices = p0.copy()
-        prices[1:] = p_rest
-    else:
-        p_rest_guess = np.ones(n_goods - 1)
-        try:
-            p_rest, info, ier, msg = fsolve(system, p_rest_guess, full_output=True)
-            prices = p0.copy()
-            prices[1:] = p_rest
-        except Exception:  # pragma: no cover - defensive
-            return None, 0.0, 0.0, "failed"
-
-    # Normalization enforcement (numéraire)
-    prices[0] = 1.0
-
-    Z_full = _aggregate_excess_demand(prices, agents)
-    z_rest_norm = float(np.linalg.norm(Z_full[1:], ord=np.inf))
-    walras_dot = float(abs(np.dot(prices, Z_full)))
-
-    if z_rest_norm < SOLVER_TOL:
-        status = "converged"
-    else:
-        status = "poor_convergence"
-
-    return prices, z_rest_norm, walras_dot, status
-
-__all__ = ["solve_walrasian_equilibrium"]
-"""
-Walrasian equilibrium solver for the economic simulation.
+Status labels preserved for backward compatibility: 'converged',
+'poor_convergence', 'no_participants', 'insufficient_viable_agents',
+'insufficient_participants', 'failed'.
 
 This module implements the core equilibrium computation using Cobb-Douglas utility
 functions with numéraire normalization. The solver uses closed-form demand functions
@@ -142,6 +43,8 @@ import numpy as np
 import scipy.optimize
 from typing import List, Tuple, Optional, Callable, Dict, Any
 import logging
+import time
+from dataclasses import dataclass, asdict
 
 # Import constants from centralized source
 try:
@@ -161,6 +64,44 @@ except ImportError:
     )
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class SolverMetrics:
+    """Diagnostics for the most recent solver invocation.
+
+    Exposed via get_last_solver_metrics() for performance harness & benchmarking
+    without altering the public return signature (backward compatibility).
+
+    Fields:
+        total_time: Wall clock total solver time (seconds)
+        fsolve_time: Time spent in primary root finder (seconds, 0 if skipped)
+        tatonnement_time: Time spent in fallback tâtonnement (seconds)
+        tatonnement_iterations: Iterations performed by fallback (0 if unused)
+        fallback_used: Whether fallback path executed (bool)
+        status: Final solver status string
+        z_rest_norm: Final rest-goods residual (∞-norm)
+        walras_dot: Walras' Law dot residual |p·Z(p)|
+        method: Primary method label (e.g., 'fsolve', 'tatonnement_only')
+    """
+
+    total_time: float = 0.0
+    fsolve_time: float = 0.0
+    tatonnement_time: float = 0.0
+    tatonnement_iterations: int = 0
+    fallback_used: bool = False
+    status: str = "uninitialized"
+    z_rest_norm: float = float("nan")
+    walras_dot: float = float("nan")
+    method: str = "unknown"
+
+
+_LAST_SOLVER_METRICS: SolverMetrics = SolverMetrics()
+
+
+def get_last_solver_metrics() -> Dict[str, Any]:
+    """Return a shallow dict snapshot of metrics from the last solver call."""
+    return asdict(_LAST_SOLVER_METRICS)
 
 
 def compute_excess_demand(prices: np.ndarray, agents: List) -> np.ndarray:
@@ -314,8 +255,17 @@ def solve_walrasian_equilibrium(
         - Uses scipy.optimize.fsolve for numerical root finding
         - Validates economic invariants and logs convergence diagnostics
     """
+    # Initialize metrics container (will be updated in-place for global snapshot)
+    global _LAST_SOLVER_METRICS
+    metrics = SolverMetrics()
+    t_total_start = time.perf_counter()
+
     # Edge case: insufficient participants for meaningful equilibrium
     if not agents:
+        metrics.status = "no_participants"
+        metrics.method = "none"
+        metrics.total_time = 0.0
+        _LAST_SOLVER_METRICS = metrics
         return None, 0.0, 0.0, "no_participants"
 
     n_goods = agents[0].alpha.size
@@ -387,6 +337,7 @@ def solve_walrasian_equilibrium(
     solver_method = "fsolve"
     tatonnement_info: Dict[str, Any] = {}
     try:
+        t_fsolve_start = time.perf_counter()
         # Request full_output for potential future diagnostics; take first element (solution vector)
         p_rest_solution_full = scipy.optimize.fsolve(
             excess_demand_rest_goods,
@@ -395,6 +346,7 @@ def solve_walrasian_equilibrium(
             maxfev=1000,  # Prevent infinite loops
             full_output=False,
         )
+        metrics.fsolve_time = time.perf_counter() - t_fsolve_start
         # Ensure ndarray form
         p_rest_solution = np.asarray(p_rest_solution_full, dtype=float)
         prices = np.concatenate([[1.0], p_rest_solution])
@@ -451,7 +403,9 @@ def solve_walrasian_equilibrium(
                 p_tat, tatonnement_info = _tatonnement(
                     _rest_only_excess, p_rest_solution, max_iterations=800
                 )
+                t_tat_start = time.perf_counter()
                 tat_residual = _rest_only_excess(p_tat)
+                metrics.tatonnement_time = time.perf_counter() - t_tat_start
                 tat_norm = float(np.linalg.norm(tat_residual, ord=np.inf))
                 if tat_norm < z_rest_norm:  # Use improved solution
                     prices = np.concatenate([[1.0], p_tat])
@@ -469,6 +423,8 @@ def solve_walrasian_equilibrium(
                         tatonnement_info.get("iterations", -1),
                         tatonnement_info.get("final_step_size", float("nan")),
                     )
+                    metrics.fallback_used = True
+                    metrics.tatonnement_iterations = tatonnement_info.get("iterations", 0)
                 else:
                     logger.warning(
                         "Fallback tâtonnement provided no improvement (%.2e >= %.2e)",
@@ -482,9 +438,49 @@ def solve_walrasian_equilibrium(
                 f"Walras' Law violation: |p·Z|={walras_dot:.2e} > {SOLVER_TOL}"
             )
 
+        # Optional diagnostic assertions (runtime guardrails) gated by env var
+        try:  # Keep diagnostics from crashing production unless assertion fails
+            import os
+            if os.environ.get("ECON_SOLVER_ASSERT", "0") == "1":
+                # Shape & basic properties
+                assert prices.ndim == 1, "Prices must be 1-D vector"
+                assert prices.size == n_goods, (
+                    f"Price dimension {prices.size} != goods {n_goods}"
+                )
+                assert np.isfinite(prices).all(), "Non-finite price detected"
+                assert prices[0] == 1.0, "Numéraire not normalized to 1.0"
+                assert np.all(prices[1:] > 0), "Non-positive non-numéraire price"
+
+                # Residual sanity
+                assert np.isfinite(z_rest_norm), "Non-finite z_rest_norm"
+                assert np.isfinite(walras_dot), "Non-finite walras_dot"
+                # Even on poor convergence, rest residual should not explode absurdly
+                assert z_rest_norm < 1e6, f"Residual explosion: {z_rest_norm:.2e}"
+                # Walras dot should remain bounded by value scale
+                assert walras_dot < 1e6, f"Walras dot explosion: {walras_dot:.2e}"
+        except AssertionError:
+            # Re-raise to surface failure to test harness when enabled
+            raise
+        except Exception as diag_err:  # pragma: no cover - defensive logging
+            logger.warning(f"Diagnostics encountered non-fatal error: {diag_err}")
+
+        # Finalize metrics
+        metrics.status = status
+        metrics.z_rest_norm = z_rest_norm
+        metrics.walras_dot = walras_dot
+        metrics.method = solver_method
+        metrics.total_time = time.perf_counter() - t_total_start
+        _LAST_SOLVER_METRICS = metrics
+        logger.debug(
+            "Solver metrics: %s",
+            {k: v for k, v in asdict(metrics).items()},
+        )
         return prices, z_rest_norm, walras_dot, status
     except Exception as e:  # Broad catch ensures failure surfaces cleanly
         logger.error(f"Solver failed: {e}")
+        metrics.status = "failed"
+        metrics.total_time = time.perf_counter() - t_total_start
+        _LAST_SOLVER_METRICS = metrics
         return None, np.inf, np.inf, "failed"
 
 
@@ -570,3 +566,13 @@ def solve_equilibrium(
 
     # Delegate to core solver
     return solve_walrasian_equilibrium(agents)
+
+# Public exports
+__all__ = [
+    "solve_walrasian_equilibrium",
+    "solve_equilibrium",
+    "compute_excess_demand",
+    "validate_equilibrium_invariants",
+    "get_last_solver_metrics",
+    "SolverMetrics",
+]
