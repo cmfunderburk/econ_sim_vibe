@@ -1,6 +1,6 @@
 # Roadmap
 
-Updated: 2025-09-21 (Visualization Track Integration)
+Updated: 2025-09-21 (Visualization Track Integration – Spatial Fidelity Step D Complete)
 
 ## Phase Overview
 | Phase | Goal | Status |
@@ -9,6 +9,29 @@ Updated: 2025-09-21 (Visualization Track Integration)
 | 2 | Spatial Extension (Global LTE + Movement Costs) | In Progress |
 | 3 | Local Price Formation & Microstructure | Planned |
 | 4 | Production, Money, Institutions | Future |
+
+## Recently Completed (Visualization Track)
+Foundational visualization & observability layers now in place:
+1. Movement Abstraction: `MovementPolicy` + `GreedyManhattanPolicy` (future A* ready).
+2. Playback Core: `PlaybackController` (play/pause/step/speed) integrated live.
+3. Frame Streams: `LiveSimulationStream` + internal `LogReplayStream` (CLI pending).
+4. HUD / Overlay: Prices, participants, fill & unmet metrics, controller state.
+5. Logging Deduplication: Unified helper for per-round record assembly (schema v1.1.0 intact).
+6. Snapshot Infrastructure: JSON + optional PNG (`--snapshot-dir`, `--snapshot-every`).
+7. Enriched Frame Data: Per-agent requested/executed/unmet/fill, travel cost, max distance.
+8. Live RPS playback control (speed adjustments + HUD speed indicator) integrated into live simulation loop.
+
+Partial / Open Gaps:
+- Mouse/timeline scrub UI (keyboard seek delivered; GUI slider pending).
+- Marketplace geometry obstacles & historical parity validation (fallback inference live; obstacle layers future).
+- No video/animation export (ffmpeg) yet.
+- A* pathfinding deferred; greedy documented as canonical interim policy.
+- Per-frame digest not yet logged (hash utility + provider digest ready).
+Completed from prior gap list:
+- Public replay CLI (`--replay <log>`) headless + GUI.
+- Seek/scrub backend (random access indexing, frame_at, prev_frame).
+- Round summary aggregate export (CSV) with prices, participation, execution aggregates.
+- Spatial agent position reconstruction (basic fidelity; geometry still pending).
 
 ## Current Focus (Phase 2)
 Primary near-term objective: Deliver a classroom-ready educational visualization and replay workflow without regressing core economic correctness.
@@ -21,22 +44,26 @@ Focus pillars:
 
 Deferral principle: Expansion of core economic regimes (TOTAL_WEALTH execution semantics, local price formation) resumes after visualization MVP is validated for teaching impact.
 
-## Priority Backlog (Ranked – Visualization Track Emphasis)
-1. Visualization Data Plumbing (frame enrichment: requested/executed/unmet/fill, travel cost, utility, convergence metrics)
-2. HUD & Overlay Layer (prices, avg fill rate, unmet share, participants, solver residual)
-3. Replay Loader & Controls (`--replay`, pause/play, step, scrub, speed)
-4. Scenario Preset Library (curated YAMLs + pedagogical annotations)
-5. Snapshot & Export (PNG capture; round summary CSV/Parquet)
-6. Pathfinding Decision: Implement A* (preferred) OR explicitly canonize greedy in docs/tests
-7. Performance Profiling & Frame Diff Optimization
-8. Interactive Agent Inspector (click/hover: orders, fills, utility, liquidity gap)
-9. Live Charts (aggregate fill rate, distance convergence, total travel cost)
-10. Financing Mode Groundwork (UI hooks to contrast PERSONAL vs TOTAL_WEALTH later)
-11. Extended Welfare Analytics (equivalent variation decomposition overlays)
-12. Capacity / Congestion Regime Toggle (visual queue pressure indicators)
-13. TOTAL_WEALTH Financing Semantics (post-viz MVP implementation)
-14. Local Price Formation (Phase 3 entry point – deferred)
+## Priority Backlog (Ranked – Post Step D Spatial Fidelity)
+1. Video / Animation Export: PNG sequence + ffmpeg MP4 (manifest + integrity digest extension + geometry hash inclusion).
+2. Scenario Preset Library: Curated YAMLs with annotated pedagogical objectives.
+3. Live Charts & Historical Metrics: Rolling convergence & participation trends (leveraging new distance columns).
+4. Performance Profiling & Diff Redraw: Benchmark renderer; implement dirty-rect / diff HUD updates.
+5. Interactive Agent Inspector: Click/hover details (orders, fills, utility, liquidity gap).
+6. Live Charts Overlay: Rolling plots (fill, unmet share, travel cost, rest-goods norm, convergence index history).
+7. Financing Mode Groundwork: UI plumbing for future TOTAL_WEALTH comparison.
+8. Extended Welfare Analytics: EV decomposition overlays & per-agent sparkline.
+9. Pathfinding Evaluation: Minimal A* or formalize greedy with explicit tests.
+10. Capacity / Congestion Toggle: Visual throughput & queue metrics (defer unless needed).
+11. TOTAL_WEALTH Financing Semantics: Strategy activation & invariant tests.
+12. Local Price Formation (Phase 3 entry point – deferred).
 
+Completed Backlog Items Removed:
+
+Ordering Rationale: Keyboard scrub + solver HUD shipped (Step E), so export & scenario breadth (1–2) now lead, followed by time-series overlays and performance hardening before deeper analytics (5–12 retained, renumbered).
+
+- HUD Integration (2025-09-21): Added convergence index (avg/initial max distance), per-frame digest snippet, max/avg distance display, and unified rendering across Pygame + ASCII. Replay pipeline reconstructs HUD fields (convergence baseline approximated from first round) and tests cover both live and replay availability.
+- Scrub Controls + Solver HUD (2025-09-22): Added ±1/±10/home/end keyboard seek, paused scrubbing without tick delay, solver residual/status + unmet ratios rendered in HUD with alert colouring, and geometry fallback for legacy logs.
 ## Stretch / Research Items (Post Visualization MVP)
 - Bilateral bargaining module
 - Continuous double auction microstructure
@@ -62,27 +89,49 @@ HUD & Overlay
 - Displays: Round number, participants (k / N), avg fill rate (≥0, ≤1), unmet % (≥0), rest-good norm < tolerance when converged.
 
 Replay Loader
-- `econ-sim --replay path.parquet` reproduces identical sequence of frames (hash of serialized per-round core fields matches live run).
-- Supports seeking to arbitrary round ≤ T in O(log T) or better (index precomputed).
+- STATUS: `--replay` CLI (headless + GUI), minimal run-level integrity digest (`*_integrity.json`), random access (frame_at, prev_frame), spatial agent positions reconstructed.
+- NEXT: Per-round frame hash verification (optional), GUI backward/seek bindings, distance & geometry reconstruction.
+- FUTURE: Full spatial parity (market bounds, distances, potential path traces) & hash of extended frame signature.
 
 Scenario Presets
 - Each preset YAML contains comment block: learning objective, expected phenomenon, key metrics.
 - Edgeworth 2×2 preset validated: computed prices within 1e-8 of analytic; classroom annotation visible.
 
 Snapshot & Export
-- Pressing 'S' produces PNG (non-zero size) with timestamped filename.
-- Optional round summary export includes columns: round, avg_fill_rate, unmet_buy_share, total_travel_cost.
+- STATUS: PNG + JSON snapshot operational; round summary CSV export implemented (prices, participation, execution & fill aggregates).
+- NEXT: Add solver residuals & distance metrics to summary (once replay geometry ready); optional Parquet path.
+- FUTURE: MP4 video export (constant frame rate) + integrity manifest (extended hashes) for reproducibility.
 
-Pathfinding (if A*)
-- Test: A* path length == Manhattan distance on empty grid for ≥10 random start positions.
-- Performance: Path computation amortized ≤ O(1) per step via cached distance field or heuristic (A* expansions < 4×distance).
+Pathfinding (Decision Pending)
+- If implemented: A* path length == Manhattan distance on empty grid (≥10 random starts) & expansions < 4×distance.
+- Else: Greedy documented as canonical with explicit disclaimer tests.
 
 Interactive Inspector (Optional Milestone)
 - Clicking an agent highlights cell; side panel shows last round order vectors and fill rates (numbers sum within FEASIBILITY_TOL of requested − unmet).
 
 No Regression Invariants (Global)
 - Existing 217 tests (or expanded suite) all pass after visualization features enabled or disabled.
-- Logging schema version remains stable (1.1.0) unless additional additive fields introduced with minor bump.
+- Logging schema version advanced to 1.3.0 (1.2.0 introduced per-frame hash; 1.3.0 adds spatial fidelity columns). Future additive fields continue minor bumps; parity & tamper tests enforce spatial invariants.
+
+## Step D (Spatial Geometry & Distance Fidelity) – Completion Summary
+Status: COMPLETE (Schema 1.3.0)
+
+Additions:
+- New per-row columns: spatial_distance_to_market, spatial_max_distance_round, spatial_avg_distance_round, spatial_initial_max_distance.
+- Geometry sidecar now hashed (geometry_hash) and included in integrity digest.
+- Parity test: Recomputes Manhattan distances from sidecar bounds; asserts per-agent and aggregate equality.
+- Tamper regression test: Mutates marketplace bounds; detects mismatch (fails without parity safeguards).
+
+Reproducibility Guarantees:
+- Distances and convergence metrics are now cryptographically anchored via geometry_hash + deterministic recomputation logic.
+- Golden replay digest (Step E) + spatial parity combine to detect both economic & spatial drift.
+
+Impact:
+- Unlocks safe HUD integration (distance-derived convergence index) and future pathfinding upgrades without invalidating historical logs.
+- Establishes baseline for exporting stable spatial KPIs (avg/max distance trajectories) and for any EV / welfare spatial decomposition overlays.
+
+Next Immediate Action:
+- Implement HUD surfaces (Step A) leveraging 1.3.0 columns & existing convergence index utility.
 
 TOTAL_WEALTH (Deferred)
 - Activation flag introduces new tests verifying liquidity gap shrinkage; financing logic isolated behind strategy interface.

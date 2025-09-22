@@ -1,47 +1,28 @@
 # Economic Simulation Vibe: Spatial Walrasian Markets
 
 A research-grade economic simulation platform for studying spatial frictions in market economies. This project implements agent-based modeling of economic exchange with spatial constraints, movement costs, and centralized marketplace trading.
+# Economic Simulation Vibe: Spatial Walrasian Markets
 
-*Forked from the original econ_sim_base project.*
-
+ **Test Suite**: 250/250 tests passing (unit + validation + replay, spatial fidelity, HUD & playback controls)
 ## 🎯 Current Development Status
 
-### Production-Ready Economic Engine with Spatial Infrastructure
-
-**PHASE 1 - COMPLETE ✅**:
-- **Economic Engine**: Walrasian equilibrium solver with Cobb-Douglas utilities
-- **Agent Framework**: Simplified inventory management with full economic correctness
-- **Market Clearing**: Constrained execution with proportional rationing
-- **Test Suite**: 217/217 tests passing (205 unit + 12 validation scenarios)
+- **Test Suite**: 247/247 tests passing (unit + validation + replay & spatial fidelity)
 - **Package Configuration**: Working setup.py and pytest.ini for development
 
-**PHASE 2 - BASIC IMPLEMENTATION 🚧**:
-- **Spatial Grid**: Complete positioning and marketplace detection
-- **Agent Movement**: Simple one-step movement toward marketplace (greedy pathfinding)
-- **Simulation Runner**: Functional with YAML configuration support
-- **Travel Cost Integration**: Basic implementation with budget adjustment
-
-### Implementation Status & Limitations
+**PHASE 2 - BASIC IMPLEMENTATION (CORE VISUAL + LOGGING COMPLETE) ✅**:
+ **Test Framework**: 250/250 tests passing (V1–V10 + logging schema guard, replay parity, spatial distance fidelity, frame hash & HUD regression tests)
+- **Simulation Runner**: YAML-driven; supports deterministic replay (`--replay`)
+- **Travel Cost Integration**: Budget-side deduction active
+- **Visualization**: Pygame HUD + ASCII renderer + snapshot support
 
 **✅ Complete & Functional**:
 - **Economic Engine**: Core agent framework, equilibrium solver, market clearing mechanisms
-- **Test Framework**: 217/217 tests passing (205 unit + 12 validation; V1–V10 plus enhanced real-function variants)
+- **Test Framework**: 247/247 tests passing (V1–V10 + logging schema guard, replay parity, spatial distance fidelity tests)
 - **Simplified Inventory Management**: Agents load full home inventory at cycle start, eliminating strategic withholding complexity
-- **Package Configuration**: Working setup.py, pytest.ini, requirements.txt
-- **Spatial Infrastructure**: Basic grid movement and marketplace detection working
-- **Travel Cost Integration**: Implemented with proper budget adjustment w_i = max(0, p·ω_total - κ·d_i)
-
-**⚠️ Simple Implementation**:
-- **Movement System**: Basic greedy movement toward marketplace (not A* pathfinding)
-- **Pathfinding**: Simple one-step movement with lexicographic tie-breaking
-- **Local Price Formation**: Uses global Walrasian pricing (Phase 2 uses LTE on marketplace participants)
+- **Movement System**: Greedy movement (A* not yet implemented; docs aligned)
+- **Local Price Formation**: Uses Walrasian LTE (participants-only) pricing
 
 **📋 Planned / In-Progress Advanced Features**:
-## ✨ Recent Enhancements (2025-09-21)
-Robustness and observability improvements have been added since the initial Phase 2 baseline:
-
-- Solver fallback: Adaptive tâtonnement engages automatically if primary `fsolve` convergence is poor, guaranteeing non-worsening residuals.
-- Enhanced invariants: Movement monotonicity, randomized conservation fuzz, per-agent value feasibility proxy.
 - Structured logging hardening: Canonical schema guard test ensures field stability (`SCHEMA_VERSION=1.1.0`). Added enriched per-agent diagnostics (requested/executed buys & sells, unmet components, fill rates) as additive fields.
 - Compression support: Optional gzip for JSONL and Parquet outputs via `RunLogger(compress=True)`.
 - Financing mode tagging: All records now populate `financing_mode="PERSONAL"` (foundation for future multi-mode analysis).
@@ -66,7 +47,7 @@ Planned follow-ups: effective budget logging, warm-started solver hints, CLI fla
 # Clone and enter directory
 git clone https://github.com/cmfunderburk/econ_sim_vibe.git
 cd econ_sim_vibe
-
+# Run full test suite (250/250 tests pass - 100% success rate)
 # Create and activate virtual environment
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
@@ -80,9 +61,6 @@ pip install -e .
 
 ### Running Tests and Simulations
 ```bash
-# Run full test suite (217/217 tests pass - 100% success rate)
-make test
-
 # Run validation scenarios (all 12 scenarios pass)
 make validate
 
@@ -93,16 +71,11 @@ python scripts/run_simulation.py --config config/edgeworth.yaml --seed 42 --no-g
 ## Research Focus
 
 This simulation studies **spatial deadweight loss** in economic markets:
-
-- **Research Question**: How do movement costs (κ > 0) and marketplace access restrictions quantitatively reduce allocative efficiency compared to frictionless Walrasian outcomes?
-- **Key Innovation**: Local-participants equilibrium pricing with constrained execution
-- **Measurement**: Money-metric welfare loss (equivalent variation in numéraire units)
-
 ### Three-Phase Development
 
-1. **Phase 1: Pure Walrasian** - ✅ Implemented: Frictionless baseline with perfect market clearing
-2. **Phase 2: Spatial Extensions** - 🚧 Partial: Basic movement, marketplace access (planned: movement costs, full spatial analysis)
-3. **Phase 3: Local Price Formation** - 📋 Planned: Bilateral bargaining, spatial price variation, advanced market mechanisms
+1. **Phase 1: Pure Walrasian** - ✅ Implemented
+2. **Phase 2: Spatial Extensions** - ✅ Core spatial movement, logging, visualization implemented
+3. **Phase 3: Local Price Formation** - 📋 Planned
 
 ## Technical Architecture
 
@@ -113,10 +86,6 @@ This simulation studies **spatial deadweight loss** in economic markets:
 - **Travel Cost System**: Budget adjustment for movement costs (implemented)
 - **Welfare Measurement**: Money-metric utilities for interpersonal comparability
 
-### Architecture Flow
-```
-Home ↔ Personal ↔ Market
- ω_h     ω_p      prices
    ↘       ↓        ↓
     total_endowment → price_computation (LTE from marketplace participants)
            ↓
@@ -149,7 +118,28 @@ Each round follows the spatial Walrasian protocol:
 **Termination**: Simulation stops at T ≤ 200 rounds, when all agents reach marketplace with total unmet demand/supply below tolerance for 5 consecutive rounds, or after max_stale_rounds without meaningful progress.
 
 ### Validation Framework (Summary)
-217/217 tests passing (205 unit + 12 validation). Scenario descriptions and expected metrics live in `docs/STATUS.md` and full economic detail in `SPECIFICATION.md`.
+247/247 tests passing (unit + validation + logging/replay integrity). Scenario descriptions and expected metrics live in `docs/STATUS.md` and full economic detail in `SPECIFICATION.md`.
+
+### Playback Controls (GUI)
+Space: play/pause | Right Arrow: step forward | Up/Down: speed ± (doubling/halving) | Esc/q: quit.
+HUD displays current status (PLAY/PAUSE/LIVE), speed (r/s), convergence index, solver residual, fill & unmet shares, distances, efficiency, and a digest snippet.
+
+### Known Numerical Notes
+Adaptive solver fallback (tâtonnement) engages when `fsolve` convergence is poor. You may see informational warnings about fallback activation; final reported `resid` (rest-goods norm) in HUD should satisfy `||Z_rest||_∞ < 1e-8` after fallback.
+
+## Logging & Replay Overview
+Per-round JSONL (or Parquet if optional deps installed) records one row per agent per round. A geometry sidecar (market bounds, grid size, movement policy) plus deterministic frame hash supports spatial & HUD fidelity replay. An integrity digest (sha256) validates price path & participant identity sets.
+
+Optional Parquet engine install:
+```bash
+pip install pyarrow  # or fastparquet
+```
+
+Replay example:
+```bash
+python scripts/run_simulation.py --config config/edgeworth.yaml --seed 42 --output runs/example
+python scripts/run_simulation.py --replay runs/example/Edgeworth\ Economy_seed42_round_log.jsonl --gui
+```
 
 ## Documentation Index
 Primary references:
