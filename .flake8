@@ -1,0 +1,19 @@
+[flake8]
+# Align with Black's default (88) but allow modest headroom for dense docstrings
+max-line-length = 100
+extend-ignore =
+    # Handled by Black; we relax for readability and inline economic formulas
+    E203,
+    # Allow longer lines up to 100 as configured
+    E501,
+per-file-ignores =
+    # Tests can have looser style (long lines, unused imports for fixtures, etc.)
+    tests/*: E501,F401
+
+# Exclude build and virtual environment artifacts
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    .venv

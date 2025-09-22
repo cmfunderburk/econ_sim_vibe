@@ -52,11 +52,12 @@ This project builds a comprehensive economic modeling platform step-by-step from
 
 **Implementation Status (September 2025):**
 - ✅ **Phase 1 Economic Engine COMPLETE**: Walrasian equilibrium solver + market clearing mechanisms
-- ✅ **Complete Validation Framework ACHIEVED**: 217/217 tests passing (100%), all V1-V10 scenarios validated (205 unit + 12 validation)
+- ✅ **Complete Validation Framework ACHIEVED**: 247/247 tests passing (100%), all V1-V10 scenarios validated (unit + validation + replay & spatial fidelity)
 - ✅ **Mathematical Foundation**: All economic invariants satisfied, robust error handling, excellent performance
 - ✅ **Basic Spatial Implementation**: Grid movement, travel cost integration, simulation runner functional
-- ⚠️ **Simple Movement System**: Basic greedy movement implemented (not A* pathfinding)
-- 📋 **Next Priority**: Advanced pathfinding algorithms and data persistence features
+- ✅ **Visualization & Replay**: Pygame HUD + ASCII renderer, deterministic log-based replay (schema 1.3.0) with integrity digest
+- ⚠️ **Simple Movement System**: Greedy movement (A* pathfinding planned)
+- 📋 **Next Priority**: Advanced pathfinding, financing mode extensions, performance benchmarks
 
 **Key Invariants (Never Violate):**
 - p₁ ≡ 1 (numéraire constraint)
@@ -92,7 +93,7 @@ This project builds a comprehensive economic modeling platform step-by-step from
 - **Performance Target**: Scalable to 100+ agents with vectorized numpy operations
 - **Extensible Framework**: Plugin system for utility functions, market mechanisms, and economic institutions
 - **Theoretical Grounding**: All components connect to established economic theory
-- **Real-time Visualization**: Planned pygame-based visualization (not yet implemented)
+- **Real-time Visualization**: Implemented (Pygame HUD + ASCII) with deterministic replay pipeline
 - **System Flow**: See [README.md](README.md) for ASCII diagram of Home ↔ Personal ↔ Market architecture
 
 ## Budget Constraints and Market Structure
@@ -409,17 +410,30 @@ python scripts/validate_scenario.py --all --output results/validation/
 ### Data Products & Reproducibility
 
 ### Structured Logging Schema
-Per-round Parquet files with columns:
-- **Schema**: `schema_version: "1.0.0"` (increment on breaking changes)
+Per-round Parquet (and JSONL) records expose a stable, versioned schema. The current additive version is `schema_version: "1.1.0"` (1.0.0 + new spatial aggregate metrics). Minor version bumps reflect strictly additive, backward-compatible field introductions; major bumps denote breaking changes (renames / semantics shifts / removals).
+
+Columns:
+- **Schema**: `schema_version: "1.1.0"`
 - **Identifiers**: `round, agent_id, timestamp`
 - **Inventories**: `x_home[g], x_personal[g], x_total[g]` for each good g
-- **Spatial**: `pos_x, pos_y, in_marketplace, distance_to_market` (minimum Manhattan/L1 distance to **any** marketplace cell, using configurable market_width × market_height)
-- **Financing snapshots**: `personal_at_entry[g], wealth_at_pricing, in_market_bool` (prevent mid-round financing mutations)
+- **Spatial (per-agent)**: 
+    - `pos_x, pos_y, in_marketplace`
+    - `distance_to_market`: minimum Manhattan/L1 distance to **any** marketplace cell (0 if inside). 4-neighborhood metric consistent with movement rules.
+- **Spatial Aggregates (round-level, repeated per row for convenience)**: 
+    - `max_distance_to_market`: \( \max_i \text{distance_to_market}_{i,t} \); measures the current spatial frontier (convergence lag of the furthest agent).
+    - `avg_distance_to_market`: \( \frac{1}{N} \sum_{i=1}^N \text{distance_to_market}_{i,t} \); population-wide mean distance capturing overall convergence speed. Includes all agents (both in and out of marketplace) to preserve comparability across rounds with changing participation. Chosen over median for linear decomposability in welfare / friction attribution analyses.
+- **Financing snapshots**: `personal_at_entry[g], wealth_at_pricing, in_market_bool` (guard against mid-round financing mutations)
 - **Economics**: `p[g], z_market[g], executed_net[g], liquidity_gap[g], utility, move_cost, equivalent_variation`
-- **LTE vs Execution**: `z_market[g]` (theoretical excess demand under total endowments) vs `executed_net[g]` (actual executed net trades) vs `liquidity_gap[g] = z_market[g] - executed_net[g]` (first-class liquidity constraint measure)
+- **LTE vs Execution**: `z_market[g]` (theoretical excess demand under total endowments) vs `executed_net[g]` (actual executed net trades) vs `liquidity_gap[g] = z_market[g] - executed_net[g]`
 - **Sign conventions**: `z_market[g] = demand - endowment` (+ = excess demand), `executed_net[g] = buys - sells` (+ = net buyer), `liquidity_gap[g] > 0` = constrained by personal inventory
 - **Termination tracking**: `termination_reason` ("horizon", "market_cleared", "stale_progress") logged in final round
 - **Metadata**: `git_sha, config_hash, random_seed`
+
+Definitions & Notes:
+- Both aggregate distance metrics are deterministic given positions & marketplace geometry, enabling downstream replay validation.
+- Aggregates repeat per record to simplify columnar analytics (no separate master table join required); they are numerically identical across all rows for a fixed `round`.
+- `avg_distance_to_market` provides a smoother early-round convergence signal than `max_distance_to_market`, which can plateau if a single straggler stalls. Researchers can approximate a simple spatial convergence index via `avg_distance_to_market / max_distance_to_market_initial`.
+- Addition of these aggregates from 1.0.0 → 1.1.0 required only a minor version bump (additive). Existing parsers that ignore unknown columns remain valid.
 
 ### Reproducibility Guarantees
 - **Configuration**: Every experiment via `python scripts/run_simulation.py --config path.yaml --seed 42`

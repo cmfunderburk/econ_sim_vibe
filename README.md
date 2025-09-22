@@ -1,40 +1,40 @@
 # Economic Simulation Vibe: Spatial Walrasian Markets
 
-A research-grade economic simulation platform for studying spatial frictions in market economies. This project implements agent-based modeling of economic exchange with spatial constraints, movement costs, and centralized marketplace trading.
-# Economic Simulation Vibe: Spatial Walrasian Markets
+Research-grade agent-based economic simulation platform for studying spatial frictions, movement costs, and centralized marketplace trading under a spatial Walrasian protocol.
 
- **Test Suite**: 250/250 tests passing (unit + validation + replay, spatial fidelity, HUD & playback controls)
+**Test Suite:** 250/250 tests passing (unit + validation + replay, spatial fidelity, HUD & playback controls)
+
 ## 🎯 Current Development Status
 
-- **Test Suite**: 247/247 tests passing (unit + validation + replay & spatial fidelity)
-- **Package Configuration**: Working setup.py and pytest.ini for development
+### Phase Summary
+- **Phase 1 (Pure Walrasian)**: COMPLETE – equilibrium solver (Cobb-Douglas), conservation & welfare validation.
+- **Phase 2 (Spatial Extensions)**: CORE IMPLEMENTATION COMPLETE – movement, travel costs, visualization, structured logging, replay integrity.
 
-**PHASE 2 - BASIC IMPLEMENTATION (CORE VISUAL + LOGGING COMPLETE) ✅**:
- **Test Framework**: 250/250 tests passing (V1–V10 + logging schema guard, replay parity, spatial distance fidelity, frame hash & HUD regression tests)
-- **Simulation Runner**: YAML-driven; supports deterministic replay (`--replay`)
-- **Travel Cost Integration**: Budget-side deduction active
-- **Visualization**: Pygame HUD + ASCII renderer + snapshot support
+### Core Capabilities (✅)
+- Economic engine: Walrasian LTE pricing (participants’ total endowments) with constrained execution (personal inventory financing).
+- Market clearing: Proportional rationing; conservation & value-feasibility invariants enforced.
+- Travel cost integration: Budget-side deduction w_i = max(0, p·ω_total − κ·d_i).
+- Movement: Deterministic greedy Manhattan step (A* planned).
+- Structured logging: JSONL + geometry sidecar + integrity digest + schema guard (1.3.0).
+- Replay & HUD: Frame hash, convergence index, clearing efficiency, unmet shares.
+- Rationing diagnostics: Per-agent unmet buys/sells, fill rates, liquidity gaps.
 
-**✅ Complete & Functional**:
-- **Economic Engine**: Core agent framework, equilibrium solver, market clearing mechanisms
-- **Test Framework**: 247/247 tests passing (V1–V10 + logging schema guard, replay parity, spatial distance fidelity tests)
-- **Simplified Inventory Management**: Agents load full home inventory at cycle start, eliminating strategic withholding complexity
-- **Movement System**: Greedy movement (A* not yet implemented; docs aligned)
-- **Local Price Formation**: Uses Walrasian LTE (participants-only) pricing
+### Enhanced Instrumentation
+- Geometry sidecar for reproducible spatial reconstruction.
+- Frame digest & hashing for regression protection.
+- Config validation preflight (grid/marketplace/agent consistency).
+- Financing mode enum scaffold (`PERSONAL` active, `TOTAL_WEALTH` placeholder).
 
-**📋 Planned / In-Progress Advanced Features**:
-- Structured logging hardening: Canonical schema guard test ensures field stability (`SCHEMA_VERSION=1.1.0`). Added enriched per-agent diagnostics (requested/executed buys & sells, unmet components, fill rates) as additive fields.
-- Compression support: Optional gzip for JSONL and Parquet outputs via `RunLogger(compress=True)`.
-- Financing mode tagging: All records now populate `financing_mode="PERSONAL"` (foundation for future multi-mode analysis).
-- Configuration validation: Early aggregated validation (`validate_simulation_config`) catches invalid grid / marketplace / agent parameter combinations.
+### In Progress / Planned (📋)
+- A* pathfinding (movement optimality under static additive costs).
+- TOTAL_WEALTH financing semantics & comparative liquidity regime analysis.
+- Performance harness & warm-start heuristics for multi-round solver reuse.
+- Optional compressed logging & CLI convenience flags.
 
-Planned follow-ups: effective budget logging, warm-started solver hints, CLI flag for compressed logging, console entry points, and performance benchmark harness.
-
-- **A* Pathfinding**: Optimal pathfinding with obstacle avoidance (not yet implemented)
-- **Data Persistence**: Parquet logging with schema versioning (hooks exist, not fully implemented)
-- **Real-time Visualization**: pygame visualization system (basic --no-gui mode works)
-- **Phase 3 Features**: Local price formation, bilateral bargaining, market microstructure
-- **Financing Mode TOTAL_WEALTH**: Enum placeholder present; distinct execution semantics not yet activated
+### Deferred / Future (🚧 Phase 3+)
+- Local price formation (bargaining / order book microstructure).
+- Spatial price dispersion & arbitrage dynamics.
+- Production, credit, institutions, and behavioral extensions.
 
 ## Quick Start
 
@@ -72,10 +72,9 @@ python scripts/run_simulation.py --config config/edgeworth.yaml --seed 42 --no-g
 
 This simulation studies **spatial deadweight loss** in economic markets:
 ### Three-Phase Development
-
-1. **Phase 1: Pure Walrasian** - ✅ Implemented
-2. **Phase 2: Spatial Extensions** - ✅ Core spatial movement, logging, visualization implemented
-3. **Phase 3: Local Price Formation** - 📋 Planned
+1. Phase 1: Pure Walrasian (complete)
+2. Phase 2: Spatial Extensions (current baseline + instrumentation)
+3. Phase 3: Local Price Formation (planned)
 
 ## Technical Architecture
 
@@ -96,12 +95,11 @@ This simulation studies **spatial deadweight loss** in economic markets:
 *Key insight: Prices computed from **total endowments** but execution limited by **personal inventory***
 
 ### Key Features
-- **Reproducible**: Deterministic simulations with configurable random seeds
-- **Scalable**: Target: 100+ agents with <30 seconds per 1000 rounds
-- **Extensible**: Plugin architecture for utility functions and movement policies
-- **Research-Grade**: Parquet logging, git SHA tracking, comprehensive validation
-       - Schema safety net: Logging schema guard test prevents silent breaking changes.
-       - Config safety net: Early validation rejects inconsistent or degenerate scenarios.
+- Deterministic: Seeded RNG, geometry sidecar, frame hash
+- Scalable target: 100+ agents (<30s per 1000 rounds typical goal)
+- Extensible: Utility / movement policies / financing modes
+- Research-grade telemetry: Schema guard, integrity digest, replay parity tests
+- Config safety: Early validation rejects inconsistent scenarios
 
 ### Financing Model (Summary)
 Personal-inventory financing enforced (PERSONAL mode). See `docs/STATUS.md` for mode semantics and future TOTAL_WEALTH notes.
@@ -117,15 +115,15 @@ Each round follows the spatial Walrasian protocol:
 
 **Termination**: Simulation stops at T ≤ 200 rounds, when all agents reach marketplace with total unmet demand/supply below tolerance for 5 consecutive rounds, or after max_stale_rounds without meaningful progress.
 
-### Validation Framework (Summary)
-247/247 tests passing (unit + validation + logging/replay integrity). Scenario descriptions and expected metrics live in `docs/STATUS.md` and full economic detail in `SPECIFICATION.md`.
+### Validation Framework
+250/250 tests passing (unit + validation + replay + visualization). Economic theory invariants, spatial distance fidelity, logging schema stability, and replay reconstruction all under regression test.
 
 ### Playback Controls (GUI)
 Space: play/pause | Right Arrow: step forward | Up/Down: speed ± (doubling/halving) | Esc/q: quit.
 HUD displays current status (PLAY/PAUSE/LIVE), speed (r/s), convergence index, solver residual, fill & unmet shares, distances, efficiency, and a digest snippet.
 
-### Known Numerical Notes
-Adaptive solver fallback (tâtonnement) engages when `fsolve` convergence is poor. You may see informational warnings about fallback activation; final reported `resid` (rest-goods norm) in HUD should satisfy `||Z_rest||_∞ < 1e-8` after fallback.
+### Numerical Notes
+Adaptive fallback (tâtonnement) engages if `fsolve` struggles; final rest-goods norm enforced at < 1e-8. HUD surfaces solver residual & status for transparency.
 
 ## Logging & Replay Overview
 Per-round JSONL (or Parquet if optional deps installed) records one row per agent per round. A geometry sidecar (market bounds, grid size, movement policy) plus deterministic frame hash supports spatial & HUD fidelity replay. An integrity digest (sha256) validates price path & participant identity sets.

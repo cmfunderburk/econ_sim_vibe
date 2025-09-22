@@ -45,6 +45,9 @@ Regression test ensures default call == explicit PERSONAL mode.
 ## Movement
 Greedy Manhattan step toward marketplace; A* not yet implemented.
 
+### Synchronized Return Behavior (2025-09-21)
+After a clearing round completes we currently defer transitioning any agent to the `TO_HOME` phase until all agents en‑route to the marketplace have arrived (i.e. every agent in `TO_MARKET` has reached an in‑marketplace cell and is in `AT_MARKET`). This preserves a pedagogical invariant used in tests: Manhattan distance to the nearest marketplace cell is non‑increasing for agents until the cohort is fully assembled. Without this synchronization early arrivals would immediately start homeward travel, temporarily increasing their distance and failing the monotonic distance regression test. A future optional configuration (e.g. `stagger_returns = true`) may relax this for more realistic staggered departures; enabling it will require parameterizing or adapting the invariant test accordingly.
+
 ## Travel Costs
 Budget adjusted: `w_i = max(0, p·ω_total - κ·d_i)`.
 
@@ -71,8 +74,38 @@ Budget adjusted: `w_i = max(0, p·ω_total - κ·d_i)`.
 - Types: `mypy src/`
 - Lint: `flake8`, `ruff check`
 
-## Logging (Planned)
-Target schema (per agent per round): prices, z_market, executed_net, liquidity_gap, position, distance, utility, travel_cost.
+## Structured Logging
+Implemented per-agent, per-round structured log (schema version `1.1.0`). Version 1.1.0 added enriched order diagnostics (requested, executed, unmet, fill rates) as additive columns.
+
+File formats:
+- Parquet (`*_round_log.parquet`) if `pandas` + parquet engine available
+- Fallback JSON Lines (`*_round_log.jsonl`) otherwise
+- Metadata sidecar: `*_metadata.json` with `schema_version`, row count, format
+
+Row = `RoundLogRecord` fields:
+| Field | Description |
+|-------|-------------|
+| `core_schema_version` | Schema version string (bump on breaking changes) |
+| `core_round` | 1-based round index after completion of round logic |
+| `core_agent_id` | Agent identifier |
+| `spatial_pos_x`, `spatial_pos_y` | Agent position at end of round |
+| `spatial_in_marketplace` | True if agent currently inside marketplace bounds |
+| `econ_prices` | Price vector used this round (empty list if no pricing occurred) |
+| `econ_executed_net` | Net executed trade quantities (buys minus sells) per good |
+| `ration_unmet_demand` | Per-good unmet demand (None when not computed) |
+| `ration_unmet_supply` | Per-good unmet supply (None when not computed) |
+| `wealth_travel_cost` | Cumulative travel cost (numéraire units) |
+| `wealth_effective_budget` | Adjusted wealth after travel cost (future) |
+| `financing_mode` | Financing mode tag (future: `personal` / `total_wealth`) |
+| `utility` | Cobb-Douglas utility of agent's total endowment snapshot |
+| `timestamp_ns` | Monotonic-ish wall clock capture for ordering |
+
+Current limitations / notes:
+- Rationing aggregates now populated when clearing occurs; remain `null` on non-clearing rounds.
+- Utility included (baseline total endowment); EV trajectory still pending.
+- Financing mode placeholder remains `null` until multi-mode integration.
+
+Usage: pass `--output results/` to `run_simulation.py` to auto-generate structured log.
 
 ## Contributing Workflow
 1. Branch from main

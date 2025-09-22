@@ -1,0 +1,199 @@
+# Economic Simulation Vibe: Spatial Walrasian Markets
+
+A research-grade economic simulation platform for studying spatial frictions in market economies. This project implements agent-based modeling of economic exchange with spatial constraints, movement costs, and centralized marketplace trading.
+
+*Forked from the original econ_sim_base project.*
+
+## 🎯 Current Development Status
+
+### Production-Ready Economic Engine with Spatial Infrastructure
+
+**PHASE 1 - COMPLETE ✅**:
+- **Economic Engine**: Walrasian equilibrium solver with Cobb-Douglas utilities
+- **Agent Framework**: Simplified inventory management with full economic correctness
+- **Market Clearing**: Constrained execution with proportional rationing
+- **Test Suite**: 247/247 tests passing (unit + validation + replay & spatial fidelity)
+- **Package Configuration**: Working setup.py and pytest.ini for development
+
+**PHASE 2 - BASIC IMPLEMENTATION (CORE VISUAL + LOGGING COMPLETE) ✅**:
+- **Spatial Grid**: Complete positioning and marketplace detection
+- **Agent Movement**: Greedy Manhattan step (A* planned, not yet implemented)
+- **Simulation Runner**: YAML-driven; supports deterministic replay (`--replay`)
+- **Travel Cost Integration**: Budget-side deduction active
+- **Visualization**: Pygame HUD + ASCII renderer + snapshot support
+- **Structured Logging**: Per-round, per-agent JSONL (schema 1.3.0) + integrity digest + geometry sidecar; Parquet optional
+
+### Implementation Status & Limitations
+
+**✅ Complete & Functional**:
+- **Economic Engine**: Core agent framework, equilibrium solver, market clearing mechanisms
+- **Test Framework**: 247/247 tests passing (V1–V10 + logging schema guard, replay parity, spatial distance fidelity tests)
+- **Simplified Inventory Management**: Agents load full home inventory at cycle start, eliminating strategic withholding complexity
+- **Package Configuration**: Working setup.py, pytest.ini, requirements.txt
+- **Spatial Infrastructure**: Grid movement & marketplace detection working
+- **Travel Cost Integration**: Implemented with proper budget adjustment w_i = max(0, p·ω_total - κ·d_i)
+- **Replay Support**: Deterministic reconstruction of HUD metrics (convergence index, digest)
+
+**⚠️ Simple Implementation**:
+- **Movement System**: Greedy movement (A* not yet implemented; docs aligned)
+- **Pathfinding**: Lexicographic tie-breaking ensures determinism
+- **Local Price Formation**: Uses Walrasian LTE (participants-only) pricing
+
+**📋 Planned / In-Progress Advanced Features**:
+- **A* Pathfinding**: Planned enhancement (current: greedy)
+- **Data Persistence**: JSONL always; Parquet if `pyarrow` or `fastparquet` installed
+- **Visualization**: Pygame HUD + ASCII text; snapshot & replay working
+- **Phase 3 Features**: Local price formation, bargaining, microstructure (future)
+- **Financing Mode TOTAL_WEALTH**: Placeholder only (PERSONAL mode enforced & tested)
+
+## Quick Start
+
+### Prerequisites
+- Python 3.12+
+- Git
+
+### Setup
+```bash
+# Clone and enter directory
+git clone https://github.com/cmfunderburk/econ_sim_vibe.git
+cd econ_sim_vibe
+
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Install package in editable mode
+pip install -e .
+```
+
+### Running Tests and Simulations
+```bash
+# Run full test suite (247/247 tests pass - 100% success rate)
+make test
+
+# Run validation scenarios (all 12 scenarios pass)
+make validate
+
+# Run specific simulation (travel costs implemented)
+python scripts/run_simulation.py --config config/edgeworth.yaml --seed 42 --no-gui
+```
+
+## Research Focus
+
+This simulation studies **spatial deadweight loss** in economic markets:
+
+- **Research Question**: How do movement costs (κ > 0) and marketplace access restrictions quantitatively reduce allocative efficiency compared to frictionless Walrasian outcomes?
+- **Key Innovation**: Local-participants equilibrium pricing with constrained execution
+- **Measurement**: Money-metric welfare loss (equivalent variation in numéraire units)
+
+### Three-Phase Development
+
+1. **Phase 1: Pure Walrasian** - ✅ Implemented: Frictionless baseline with perfect market clearing
+2. **Phase 2: Spatial Extensions** - ✅ Core spatial movement, logging, visualization implemented
+3. **Phase 3: Local Price Formation** - 📋 Planned: Bilateral bargaining, spatial price variation, advanced market mechanisms
+
+## Technical Architecture
+
+### Core Components
+- **Walrasian Solver**: Cobb-Douglas closed forms with numerical fallbacks
+- **Spatial Grid**: Greedy one-step movement on configurable grid
+- **Market Clearing**: Constrained execution with carry-over diagnostics
+- **Travel Cost System**: Budget-side deduction
+- **Welfare Measurement**: Money-metric utilities (equivalent variation)
+
+### Architecture Flow
+```
+Home ↔ Personal ↔ Market
+ ω_h     ω_p      prices
+   ↘       ↓        ↓
+    total_endowment → price_computation (LTE from marketplace participants)
+           ↓
+    personal_inventory → execution (constrained by personal stock)
+           ↓
+        rationing → carry-over orders
+```
+*Key insight: Prices computed from **total endowments** but execution limited by **personal inventory***
+
+### Key Features
+- **Reproducible**: Deterministic runs (seeded RNG, geometry sidecar, frame hash)
+- **Scalable**: Target: 100+ agents with <30 seconds per 1000 rounds
+- **Extensible**: Utility plugins, movement policies, future financing modes
+- **Research-Grade**: Structured logging (schema 1.3.0), integrity digest, replay verification, git SHA tracking
+       - Schema guard & replay parity tests prevent silent drift
+       - Config safety net: Early validation rejects inconsistent scenarios
+
+### Financing Model (Summary)
+Personal-inventory financing enforced (PERSONAL mode). See `docs/STATUS.md` for mode semantics and future TOTAL_WEALTH notes.
+
+## Simulation Protocol
+
+Each round follows the spatial Walrasian protocol:
+1. **Agent Movement**: Move toward marketplace (Manhattan/L1; tie-break lexicographic by (x,y), then agent ID)
+2. **Price Discovery**: Compute Local Theoretical Equilibrium (LTE) using **post-move** marketplace participants' total endowments
+3. **Order Generation**: Each marketplace agent computes buy/sell orders
+4. **Order Matching**: Execute trades constrained by personal inventory with proportional rationing
+5. **State Update**: Record results, update positions and carry-over diagnostics
+
+**Termination**: Stops at T ≤ 200 rounds; early exit if all agents reach marketplace (all intermediate rounds logged for replay).
+
+### Validation Framework (Summary)
+247/247 tests passing (unit + validation + logging/replay integrity). Scenario descriptions and expected metrics live in `docs/STATUS.md` and full economic detail in `SPECIFICATION.md`.
+
+## Logging & Replay Overview
+Per-round JSONL (or Parquet if optional deps installed) records one row per agent per round. A geometry sidecar (market bounds, grid size, movement policy) plus deterministic frame hash supports spatial & HUD fidelity replay. An integrity digest (sha256) validates price path & participant identity sets.
+
+Optional Parquet engine install:
+```bash
+pip install pyarrow  # or fastparquet
+```
+
+Replay example:
+```bash
+python scripts/run_simulation.py --config config/edgeworth.yaml --seed 42 --output runs/example
+python scripts/run_simulation.py --replay runs/example/Edgeworth\ Economy_seed42_round_log.jsonl --gui
+```
+
+## Documentation Index
+Primary references:
+- `docs/STATUS.md` (current state)
+- `docs/ROADMAP.md` (priorities & backlog)
+- `docs/DEVELOPER_GUIDE.md` (developer workflow)
+- `SPECIFICATION.md` (theory & algorithms)
+
+## Dependencies
+
+### Core Libraries
+- **numpy** - Mathematical operations and array handling
+- **scipy** - Optimization (Walrasian equilibrium solver)
+
+### Visualization (Optional)
+- **pygame** - Real-time visualization of agent movement (optional import for `--no-gui` CI compatibility)
+
+### Development Tools
+- **pytest** - Testing framework
+- **black** - Code formatting
+- **mypy** - Type checking
+- **numba** - Optional JIT compilation for performance
+
+## Contributing
+See `docs/DEVELOPER_GUIDE.md` for setup & commands, and `CONTRIBUTING.md` for contribution standards.
+
+## Questions? Need Help?
+
+**Documentation & Support**:
+- **[SPECIFICATION.md](SPECIFICATION.md)** - Complete technical specification
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** - Development workflow and standards
+- **Issues**: Use GitHub Issues for bug reports and feature requests
+- **Discussions**: Use GitHub Discussions for research questions and collaboration
+- **AI Assistant**: Project includes comprehensive AI development instructions
+
+## License
+
+MIT License - See LICENSE file for details.
+
+---
+
+**Ready to contribute?** Follow the setup instructions above to get started. 🚀
