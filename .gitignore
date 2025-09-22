@@ -49,8 +49,10 @@ snapshots/
 frames/
 
 # Temporary planning / notes (retain canonical docs in docs/)
+# NOTE: We allow committed curated NEXT_STEPS artifacts under copilot_summaries for provenance.
 NEXT STEPS*
 NEXT_STEPS*
+!copilot_summaries/NEXT_STEPS_*.md
 *.bak
 
 # OS files
